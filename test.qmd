@@ -1,0 +1,16 @@
+---
+title: 'test'
+format: 'pdf'
+---
+```{r}
+library('quarto')
+```
+
+```{r}
+seq(1, 10)
+```
+
+```{r}
+quarto::quarto_path()
+```
+

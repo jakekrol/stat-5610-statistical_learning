@@ -1,0 +1,28 @@
+# 2026-01-11
+
+## goal 1: setup R
+
+- use conda
+```
+# make env
+conda create -n r_env -c conda-forge r-base r-essentials -y
+```
+
+- install quarto
+```
+install.packages("quarto")
+```
+
+vscode extension config
+- install R lang, quarto
+- set
+    - quarto.path
+    - r.term
+    -r.path
+
+- example
+    - /data/jake/stat-5610-statistical_learning/test.qmd
+```
+cd /data/jake/stat-5610-statistical_learning
+quarto render test.qmd
+```
