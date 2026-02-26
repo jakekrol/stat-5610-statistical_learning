@@ -1,0 +1,83 @@
+---
+title: "KNN decision boundaries"
+author: "Eric Vance"
+format: pdf
+editor: visual
+date: 2026-01-20
+---
+
+## For Team Application Exercises Wednesday, Jan 21, 2026
+
+I'm going to use the iris dataset to demonstrate fitting knn models and plotting decision boundaries.
+
+## Exercise 2: Plot of iris data
+
+The iris dataset is already built in. Still, I need to install and load some packages for KNN.
+
+```{r}
+#install.packages("class")
+library(class)
+library(tidyverse)
+glimpse(iris)
+```
+
+Plot Petal.Length (x) v. Petal.width (y).
+
+```{r}
+ggplot(data=select(iris,Petal.Length,Petal.Width,Species)) +
+  geom_point(aes(x=Petal.Length, y=Petal.Width, color=Species)) +
+  labs(title = "3 Species of Iris",
+       x = "Petal Length",
+       y = "Petal Width")
+ggsave("Plots/iris_plot_2026-01-21.pdf")
+```
+
+## Exercise 4: Fit KNN model to grid and plot contours (decision boundaries)
+
+We are going to make predictions of which species an iris might be for given values of Petal.Length and Petal.Width. There are 50 training observations that we will train our K-Nearest Neighbors (KNN) model on. Then we'll apply the KNN method to make (test) predictions for the entire 2-dimensional grid of Petal.Width and Petal.Length.
+
+First create a grid.
+
+```{r}
+# Define the grid limits
+x_min <- min(iris$Petal.Length) - 1
+x_max <- max(iris$Petal.Length) + 1
+y_min <- min(iris$Petal.Width) - 1
+y_max <- max(iris$Petal.Width) + 1
+
+# Create a grid of values by 0.1 x 0.1
+grid2 <- expand.grid(Petal.Length = seq(x_min, x_max, by = 0.1),
+                    Petal.Width = seq(y_min, y_max, by = 0.1))
+```
+
+### Apply KNN
+
+Now we'll fit KNN with k=2.
+
+```{r}
+# Train the KNN model and predict on the grid
+predicted_species <- knn(train = iris[,3:4], test = grid2, 
+                         cl = iris[,5], k = 2)
+
+# Add predictions to the grid data
+grid2$Predicted.Species <- predicted_species
+```
+
+Now plot the decision boundary by creating a contour plot of the now three dimensional dataset (X1=Petal.Length, X2=Petal.Width, Z=Predicted.Species). The contour plot will be overlaid on the original scatter plot.
+
+```{r}
+base.plot <- ggplot(data=select(iris,Petal.Length,Petal.Width,Species)) +
+  geom_point(aes(x=Petal.Length, y=Petal.Width, color=Species)) +
+  labs(title = "KNN Decision Boundary for k=2",
+       x = "Petal Length",
+       y = "Petal Width")
+
+# Add decision boundaries using geom_contour with the grid "data"
+contour.plot <- base.plot +
+  geom_contour(data = grid2, aes(x = Petal.Length, y = Petal.Width, 
+                                z = as.numeric(Predicted.Species)),
+               bins = 3, color = "black") 
+  
+print(contour.plot)
+ggsave("Plots/iris_KNN.k2_2026-01-21.pdf")
+```

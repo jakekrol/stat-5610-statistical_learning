@@ -1,0 +1,359 @@
+---
+title: "Code for 2026-02-25"
+format: pdf
+editor: visual
+---
+
+## Code for TAE
+
+Generating data to determine knots and fit natural and cubic splines.
+
+```{r}
+library(splines)
+library(tidyverse)
+set.seed(225)
+
+x1 <- seq(0, 4 * pi, length.out = 100)
+y1 <- sin(x1) + rnorm(100, 0, 0.3)
+x2 <- seq(0, 10, length.out = 100)
+y2 <- ifelse(x2 < 3, 2 * x2, ifelse(x2 < 7, -x2 + 9, 0.5 * x2 + 2)) + rnorm(100, 0, 0.5)
+
+x <- x1+x2
+y <- y1+y2
+
+data <- data.frame(x, y)
+
+ggplot(data, aes(x = x1, y = y1)) +
+  geom_point() +
+  labs(title = "Nonlinear Data", x = "X", y = "Y") +
+  theme_minimal() 
+ggsave("2026-02-25.NonlinearData.png")
+
+```
+
+Let's fit all the models to the data and figure out how many knots and then make predictions in the middle using natural spline v. cubic spline.
+
+### Natural Splines
+
+```{r}
+library(splines)
+library(caret)  # For cross-validation functionality
+library(ggplot2) # For plotting
+
+# Sample Data from above
+
+# Define the range of knots to test
+knot.counts <- 1:10  # Test from 2 to 10 knots
+
+# Create a data frame to store the results
+cv.results <- data.frame(knots = knot.counts, cv.error = NA)
+
+# Perform cross-validation for each number of knots
+for (i in 1:length(knot.counts)) {
+  num.knots <- knot.counts[i]
+
+  # Define the cross-validation folds
+  folds <- createFolds(data$y, k = 10) # 10-fold CV
+
+  # Store the errors for each fold
+  fold.errors <- numeric(length(folds))
+
+  # Perform cross-validation
+  for (j in 1:length(folds)) {
+    train.data <- data[-folds[[j]], ]
+    test.data <- data[folds[[j]], ]
+
+    # Fit the natural spline model
+    spline.model <- lm(y ~ ns(x, knots = quantile(train.data$x, seq(0, 1, length.out = num.knots + 2))[-c(1, num.knots+2)]), data = train.data) #the knots are the quantiles, but not the first or last (i.e., not the min or max)
+
+    # Make predictions on the test fold
+    predictions <- predict(spline.model, newdata = test.data)
+
+    # Calculate the mean squared error (MSE)
+    fold.errors[j] <- mean((test.data$y - predictions)^2)
+  }
+
+  # Store the average MSE
+  cv.results$cv.error[i] <- mean(fold.errors)
+}
+
+# Find the optimal number of knots
+optimal.knots <- cv.results$knots[which.min(cv.results$cv.error)]
+cat("Optimal number of knots:", optimal.knots, "\n")
+
+# Plot the cross-validation results
+ggplot(cv.results, aes(x = knots, y = cv.error)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cross-Validation for Knot Selection", x = "Number of Knots", y = "Cross-Validation Error (MSE)") +
+  theme_minimal()
+
+# Fit the final model with the optimal number of knots
+final.spline.model <- lm(y ~ ns(x, knots = quantile(data$x, seq(0, 1, length.out = optimal.knots + 2))[-c(1, optimal.knots+2)]), data = data)
+
+# Visualize the final model
+ggplot(data, aes(x = x, y = y)) +
+  geom_point() +
+  geom_line(aes(y = predict(final.spline.model)), color = "blue") +
+  labs(title = paste("Natural Spline with", optimal.knots, "Knots"), x = "X", y = "Y") +
+  theme_minimal()
+```
+
+How does this natural spline compare with pre-selected knots at X=11 and X=16?
+
+First, let's redo this analysis with 10x more data.
+
+```{r}
+set.seed(225)
+
+x1 <- seq(0, 4 * pi, length.out = 1000)
+y1 <- sin(x1) + rnorm(1000, 0, 0.3)
+x2 <- seq(0, 10, length.out = 1000)
+y2 <- ifelse(x2 < 3, 2 * x2, ifelse(x2 < 7, -x2 + 9, 0.5 * x2 + 2)) + rnorm(1000, 0, 0.5)
+
+x <- x1+x2
+y <- y1+y2
+
+data.10x <- data.frame(x, y)
+
+knot.counts <- 1:10  # Test from 2 to 10 knots
+
+# Create a data frame to store the results
+cv.results <- data.frame(knots = knot.counts, cv.error = NA)
+
+# Perform cross-validation for each number of knots
+for (i in 1:length(knot.counts)) {
+  num.knots <- knot.counts[i]
+
+  # Define the cross-validation folds
+  folds <- createFolds(data$y, k = 10) # 10-fold CV
+
+  # Store the errors for each fold
+  fold.errors <- numeric(length(folds))
+
+  # Perform cross-validation
+  for (j in 1:length(folds)) {
+    train.data <- data.10x[-folds[[j]], ]
+    test.data <- data.10x[folds[[j]], ]
+
+    # Fit the natural spline model
+    spline.model <- lm(y ~ ns(x, knots = quantile(train.data$x, seq(0, 1, length.out = num.knots + 2))[-c(1, num.knots+2)]), data = train.data) #the knots are the quantiles, but not the first or last (i.e., not the min or max)
+
+    # Make predictions on the test fold
+    predictions <- predict(spline.model, newdata = test.data)
+
+    # Calculate the mean squared error (MSE)
+    fold.errors[j] <- mean((test.data$y - predictions)^2)
+  }
+
+  # Store the average MSE
+  cv.results$cv.error[i] <- mean(fold.errors)
+}
+
+# Find the optimal number of knots
+optimal.knots.10x <- cv.results$knots[which.min(cv.results$cv.error)]
+cat("Optimal number of knots:", optimal.knots, "\n")
+
+# Plot the cross-validation results
+ggplot(cv.results, aes(x = knots, y = cv.error)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cross-Validation for Knot Selection 10x data", x = "Number of Knots", y = "Cross-Validation Error (MSE)") +
+  theme_minimal()
+
+# Fit the final model with the optimal number of knots
+final.spline.model.10x <- lm(y ~ ns(x, knots = quantile(data$x, seq(0, 1, length.out = optimal.knots.10x + 2))[-c(1, optimal.knots.10x+2)]), data = data.10x)
+
+# Visualize the final model
+ggplot(data.10x, aes(x = x, y = y)) +
+  geom_point() +
+  geom_line(aes(y = predict(final.spline.model.10x)), color = "blue") +
+  labs(title = paste("Natural Spline with", optimal.knots.10x, "Knots (10x data"), x = "X", y = "Y") +
+  theme_minimal()
+```
+
+Just two knots actually seems optimal. Those knots would be located at:
+
+```{r}
+quantile(x,seq(0,1,length.out=4))# 7.522 and 15.044
+```
+
+But still, what is the test MSE for a model with 8, 6, or 2 equally spaced knots compared to knots at x=11 and x=16?
+
+First, let's generate a new validation set of 100 x's using a different seed.
+
+```{r}
+set.seed(228)
+
+x1 <- seq(0, 4 * pi, length.out = 100)
+y1 <- sin(x1) + rnorm(100, 0, 0.3)
+x2 <- seq(0, 10, length.out = 100)
+y2 <- ifelse(x2 < 3, 2 * x2, ifelse(x2 < 7, -x2 + 9, 0.5 * x2 + 2)) + rnorm(100, 0, 0.5)
+
+x <- x1+x2
+y <- y1+y2
+valid.data <- data.frame(x,y)
+```
+
+Let's fit the natural spline models (with original data and 10x data) with knots at x=11 and x=16.
+
+```{r}
+spline.model.2knots <- lm(y ~ ns(x, knots = c(11,16)), data = data)
+spline.model.2knots.10x <- lm(y ~ ns(x, knots = c(11,16)), data = data.10x)
+ggplot(valid.data, aes(x = x, y = y)) +
+  geom_point() +
+  geom_line(aes(y = predict(spline.model.2knots.10x, newdata=valid.data)), color = "blue") +
+  geom_line(aes(y = predict(spline.model.2knots, newdata=valid.data)), color = "red") +
+  labs(title = "Natural Spline with 2 pre-specified knots (blue is 10x data)", x = "X", y = "Y") +
+  theme_minimal()
+```
+
+```{r}
+(valid.MSE <- mean((valid.data$y - predict(final.spline.model,newdata=valid.data))^2)) #8 knots [1] 0.4584815
+(valid.MSE.10x <- mean((valid.data$y - predict(final.spline.model.10x,newdata=valid.data))^2)) #6 knots [1] 0.4660506
+
+(valid.MSE.2knots <- mean((valid.data$y - predict(spline.model.2knots,newdata=valid.data))^2)) #2 knots, 100 data points #0.867215
+(valid.MSE.2knots.10x <- mean((valid.data$y - predict(spline.model.2knots.10x,newdata=valid.data))^2)) #2 knots, 1000 data points #0.8648105
+
+#Same MSE for specifying the knots or not.
+
+
+```
+
+Same MSE whether I specify the knots or not.
+
+Plot the 2 pre-specified knots vs the 8 knots or 6 knots.
+
+```{r}
+ggplot(valid.data, aes(x = x, y = y)) + geom_point() + geom_line(aes(y = predict(spline.model.2knots.10x, newdata=valid.data)), color = "blue") + geom_line(aes(y = predict(final.spline.model.10x, newdata=valid.data)), color = "red") + labs(title = "Natural Spline with 2 pre-specified knots (blue) or 6 knots (red)", x = "X", y = "Y") + theme_minimal()
+
+```
+
+2 pre-specified knots is WAY worse than letting R find the optimal number of knots. And the 8 knot model worked better on the test set than the 6 knot model fit to 1000 data points. More data isn't necessarily better.
+
+### Fit a cubic spline and regression spline (smoothing spline?)
+
+First, let's redo this analysis but adding a cubic spline and a regression spline that allows for discontinuities.
+
+```{r}
+set.seed(226)
+
+x1 <- seq(0, 4 * pi, length.out = 100)
+y1 <- sin(x1) + rnorm(100, 0, 0.3)
+x2 <- seq(0, 10, length.out = 100)
+y2 <- ifelse(x2 < 3, 2 * x2, ifelse(x2 < 7, -x2 + 9, 0.5 * x2 + 2)) + rnorm(100, 0, 0.5)
+
+x <- x1+x2
+y <- y1+y2
+
+data.test <- data.frame(x, y)
+
+knot.counts <- 1:10  # Test from 2 to 10 knots
+
+# Create a data frame to store the results
+cv.results.ns <- data.frame(knots = knot.counts, cv.error.ns = NA) #setup for natural splines
+cv.results.cs <- data.frame(knots = knot.counts, cv.error.cs = NA) #set up for cubic splines
+
+# Perform cross-validation for each number of knots
+for (i in 1:length(knot.counts)) {
+  num.knots <- knot.counts[i]
+
+  # Define the cross-validation folds
+  folds <- createFolds(data$y, k = 10) # 10-fold CV
+
+  # Store the errors for each fold
+  fold.errors.ns <- numeric(length(folds))
+  fold.errors.cs <- numeric(length(folds))
+
+  # Perform cross-validation
+  for (j in 1:length(folds)) {
+    train.data <- data.test[-folds[[j]], ]
+    test.data <- data.test[folds[[j]], ]
+
+    # Fit the natural spline model
+    spline.model.ns <- lm(y ~ ns(x, knots = quantile(train.data$x, seq(0, 1, length.out = num.knots + 2))[-c(1, num.knots+2)]), data = train.data) #the knots are the quantiles, but not the first or last (i.e., not the min or max)
+
+     # Fit the cubic spline model using the b-splines bs() function
+    spline.model.cs <- lm(y ~ bs(x, knots = quantile(train.data$x, seq(0, 1, length.out = num.knots + 2))[-c(1, num.knots+2)]), data = train.data) #the knots are the quantiles, but not the first or last (i.e., not the min or max)
+
+    # Make predictions on the test fold
+    predictions.ns <- predict(spline.model.ns, newdata = test.data)
+    predictions.cs <- predict(spline.model.cs, newdata = test.data)
+
+    # Calculate the mean squared error (MSE)
+    fold.errors.ns[j] <- mean((test.data$y - predictions.ns)^2)
+    fold.errors.cs[j] <- mean((test.data$y - predictions.cs)^2)
+  }
+
+  # Store the average MSE
+  cv.results.ns$cv.error.ns[i] <- mean(fold.errors.ns)
+  cv.results.cs$cv.error.cs[i] <- mean(fold.errors.cs)
+}
+
+# Find the optimal number of knots
+optimal.knots.ns <- cv.results.ns$knots[which.min(cv.results.ns$cv.error.ns)]
+cat("Optimal number of knots for natural spline", optimal.knots.ns, "\n")
+optimal.knots.cs <- cv.results.cs$knots[which.min(cv.results.cs$cv.error.cs)]
+cat("Optimal number of knots for cubic spline", optimal.knots.cs, "\n")
+
+# Plot the cross-validation results
+ggplot(cv.results.ns, aes(x = knots, y = cv.error.ns)) +
+  geom_line(col="red") +
+  geom_point(col="red") +
+  geom_line(data=cv.results.cs, aes(x=knots, y=cv.error.cs), col="blue") +
+  geom_point(data=cv.results.cs, aes(x=knots, y=cv.error.cs), col="blue") +
+  labs(title = "Cross-Validation for Knot Selection (red is ns) (blue is cs)", x = "Number of Knots", y = "Cross-Validation Error (MSE)") +
+  theme_minimal()
+
+# Fit the final models with the optimal number of knots
+final.spline.model.ns <- lm(y ~ ns(x, knots = quantile(data.test$x, seq(0, 1, length.out = optimal.knots.ns + 2))[-c(1, optimal.knots.ns+2)]), data = data.test)
+
+final.spline.model.cs <- lm(y ~ bs(x, knots = quantile(data.test$x, seq(0, 1, length.out = optimal.knots.cs + 2))[-c(1, optimal.knots.cs+2)]), data = data.test)
+
+
+# Visualize the final models
+ggplot(data.test, aes(x = x, y = y)) +
+  geom_point() +
+  geom_line(aes(y = predict(final.spline.model.ns)), color = "red") +
+  geom_line(aes(y = predict(final.spline.model.cs)), color = "blue") +
+
+  labs(title = paste("Natural (red) and Cubic (blue) Spline with", optimal.knots.10x, "Knots"), x = "X", y = "Y") +
+  theme_minimal()
+```
+
+Just two knots actually seems optimal. Those knots would be located at:
+
+```{r}
+quantile(x,seq(0,1,length.out=4))# 7.522 and 15.044
+```
+
+But still, what is the test MSE for a model with 8, 6, or 2 equally spaced knots compared to knots at x=11 and x=16?
+
+First, let's generate a new validation set of 100 x's using a different seed.
+
+```{r}
+set.seed(228)
+
+x1 <- seq(0, 4 * pi, length.out = 100)
+y1 <- sin(x1) + rnorm(100, 0, 0.3)
+x2 <- seq(0, 10, length.out = 100)
+y2 <- ifelse(x2 < 3, 2 * x2, ifelse(x2 < 7, -x2 + 9, 0.5 * x2 + 2)) + rnorm(100, 0, 0.5)
+
+x <- x1+x2
+y <- y1+y2
+valid.data <- data.frame(x,y)
+```
+
+Let's fit the natural spline models (with original data and 10x data) with knots at x=11 and x=16.
+
+```{r}
+spline.model.2knots <- lm(y ~ ns(x, knots = c(11,16)), data = data)
+spline.model.2knots.10x <- lm(y ~ ns(x, knots = c(11,16)), data = data.10x)
+ggplot(valid.data, aes(x = x, y = y)) +
+  geom_point() +
+  geom_line(aes(y = predict(spline.model.2knots.10x, newdata=valid.data)), color = "blue") +
+  geom_line(aes(y = predict(spline.model.2knots, newdata=valid.data)), color = "red") +
+  labs(title = "Natural Spline with 2 pre-specified knots (blue is 10x data)", x = "X", y = "Y") +
+  theme_minimal()
+```
+

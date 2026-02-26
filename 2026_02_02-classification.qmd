@@ -1,0 +1,164 @@
+---
+title: "2026-02-02 Logistic Regression Review, Doing LDA, QDA, NB"
+author: "STAT 4610-5610: Spring 2026"
+format: pdf
+editor: visual
+date: 2026-02-02
+execute:
+  echo: true    # Hides the code
+  output: false  # Hides the output (tables, text, etc.)
+  warning: false # Hides those annoying "package loaded" warnings
+  message: false # Hides diagnostic messages
+---
+
+## Team Application Exercises
+
+#### Motivation
+
+The learning goal for this chapter is for students to first be able to “do” LDA, QDA, Naïve Bayes, and Logistic Regression (and KNN). This understanding of what a method does and how to implement it in R forms the basis for understanding how the math underlying these methods affects the method's performance under different Q1 scenarios. So, students then should learn:
+
+1.  How to "do" LDA, QDA, Naive Bayes, Logistic Regression, and KNN.
+2.  The math of these methods
+3.  How the math relates to differing assumptions or conditions about the problem
+4.  How those assumptions relate to different Q1 problem contexts and different Q3 interpretations/recommendations (i.e., putting it together).
+
+### Review of code for Logistic Regression
+
+On Friday you were asked to work through question 13 a) through d) on p 192 of ISLR2. The goal for your team was for everyone to code up the logistic regression to be able to answer the following question:
+
+1.  If some statistical learners had created this model at the end of 2008 (using training data from 1990 to 2008), would they likely have been able to make money in 2009 and 2010?
+
+    A. Yes. B. No. C. Maybe, depends on the size of the gains and losses. D. Maybe, depends on the actual implementation of the logistic regression model. E. None of the above
+
+Today we will (quickly) walk through some code, and then your team will answer the question above.
+
+#### Working through question 13 on p 192
+
+A)  Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+
+```{r}
+library(ISLR2)
+suppressPackageStartupMessages(library(tidyverse))
+glimpse(Weekly)
+summary(Weekly)
+prop.table(table(Weekly$Direction))
+
+plot(Weekly)
+attach(Weekly)
+plot(x=Year, y=Lag1)
+
+ggplot(Weekly, aes(x = Year, fill = Direction)) + 
+  geom_bar(position = "fill") +
+  geom_hline(yintercept = 0.5, col = "grey45") +
+  scale_x_continuous(breaks = seq(1990, 2010), minor_breaks = NULL) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_light() + 
+  theme(axis.title.y = element_blank(), 
+        legend.position = "bottom") + 
+  ggtitle("% of Up/Down Days in Year")
+
+```
+
+Maybe some trends. Nothing so obvious so far. Probably need to make better visualizations.
+
+B. Now, fit a logistic regression model.
+
+```{r}
+lr.fit <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, data=Weekly, family="binomial")
+summary(lr.fit)
+```
+
+C. Let's see how well the model fits the training set.
+
+```{r}
+glm.probs <- predict(lr.fit, Weekly, type = "response")
+glm.predicts <- factor(ifelse(glm.probs > 0.5, "Up", "Down"))
+hist(glm.probs)
+library(caret)
+confusionMatrix(glm.predicts,Weekly$Direction,positive="Up")
+```
+
+The caret::confusionMatrix function is great! It provides lots of useful information. Install the "caret" package and load it and read up on ?confusionMatrix
+
+Our logistic regression doesn't fit very well, just a bit above baseline 0.5556.
+
+Now lets train a model on 1990 to 2008 data and test it on 2009 and 2010 data.
+
+```{r}
+train <- Weekly[Weekly$Year <= 2008, ]
+test <- Weekly[Weekly$Year > 2008, ]
+
+lr.train <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, data=train, family="binomial")
+summary(lr.train)
+
+predicted.test <- factor(ifelse(predict(lr.train, newdata = test, type = "response") > 0.5, "Up", "Down"))
+
+confusionMatrix(predicted.test, test$Direction, positive = "Up")
+```
+
+The logistic regression model with all of the variables is terrible. We would lose a ton of money.
+
+D. Let's fit the model just with Lag2.
+
+```{r}
+lr.train2 <- glm(Direction ~ Lag2, data=train, family="binomial")
+summary(lr.train2)
+
+predicted.test2 <- factor(ifelse(predict(lr.train2, newdata = test, type = "response") > 0.5, "Up", "Down"))
+
+confusionMatrix(predicted.test2, test$Direction, positive = "Up")
+```
+
+This model is better! Maybe some interactions and transformations would make for an even better fit of the test dataset. What does your team think? Answer question #1.
+
+### Practice doing LDA, QDA, NB
+
+2.  Fit LDA, QDA, and Naive Bayes models for the data in Lab1. If you have time, fit the logistic regression and KNN with k=5. Which method has the best fit to the data? On Friday we are going to dive into the math and the implications of the mathematical forms of these methods for when and why each method should be preferred.
+
+```{r}
+# lda
+library(MASS)
+lda_model <- MASS::lda(Direction ~ Lag2, data = train)
+predicted <- predict(lda_model, newdata = test)
+confusionMatrix(predicted$class, test$Direction, positive = "Up")
+acc_lda <- confusionMatrix(predicted$class, test$Direction, positive = "Up")$overall["Accuracy"]
+
+```
+
+```{r}
+# qda
+qda_model <- MASS::qda(Direction ~ Lag2, data = train)
+predicted_qda <- predict(qda_model, newdata = test)
+confusionMatrix(predicted_qda$class, test$Direction, positive = "Up")
+acc_qda <- confusionMatrix(predicted_qda$class, test$Direction, positive = "Up")$overall["Accuracy"]
+```
+
+```{r}
+# naive bayes
+library(e1071)
+nb_model <- e1071::naiveBayes(Direction ~ Lag2, data = train)
+predicted_nb <- predict(nb_model, newdata = test)
+confusionMatrix(predicted_nb, test$Direction, positive = "Up")
+acc_nb <- confusionMatrix(predicted_nb, test$Direction, positive = "Up")$
+```
+
+```{r}
+# knn
+library(class)
+train_X <- as.data.frame(train$Lag2)
+test_X <- as.data.frame(test$Lag2)
+train_Y <- train$Direction
+predicted_knn <- class::knn(train = train_X, test = test_X, cl = train_Y, k = 5)
+confusionMatrix(predicted_knn, test$Direction, positive = "Up")
+acc_knn <- confusionMatrix(predicted_knn, test$Direction, positive = "Up
+")$overall["Accuracy"]
+```
+
+```{r}
+# plot 
+accuracy_df <- data.frame(
+  Method = c("LDA", "QDA", "Naive Bayes", "KNN"),
+  Accuracy = c(acc_lda, acc_qda, acc_nb, acc_knn)
+)
+
+```

@@ -1,0 +1,137 @@
+---
+title: "Cross Validiation TAE"
+author: "Stat Learning Spring 2026: 2026-02-11"
+format: pdf
+editor: visual
+---
+
+## Team Application Exercises: Test/Validation, k-fold CV, LOOCV
+
+#### Part 1: Concept checks
+
+**1. A researcher performs LOOCV and 10-fold CV on the same dataset. Which of the following is generally true regarding the Bias-Variance Trade-off?**
+
+A. LOOCV has higher bias and lower variance than 10-fold CV.
+
+B. 10-fold CV has higher bias and higher variance than LOOCV.
+
+C. LOOCV has lower bias but higher variance than 10-fold CV.
+
+D. 10-fold CV has lower bias and lower variance than LOOCV.
+
+E. Both methods produce identical bias and variance because they use the same data.
+
+**2. The expected test Mean Squared Error (MSE) for a given observation** $x_0$ **can be mathematically decomposed into three distinct components. Which of these represents the "floor" of the prediction error that cannot be reduced, no matter how flexible the model becomes?**
+
+A. $\text{Var}(\hat{f}(x_0))$ (Variance)
+
+B. $[\text{Bias}(\hat{f}(x_0))]^2$ (Squared Bias)
+
+C. $\text{Var}(\epsilon)$ (Irreducible Error)
+
+D. $\text{RSS}/n$ (Training Error)
+
+E. None of the above (what would it be?)
+
+**3. A student is training a series of polynomial regression models. As they increase the degree of the polynomial (increasing model flexibility), which of the following typically occurs?**
+
+A. The Training MSE decreases monotonically, while the Test MSE typically follows a U-shape.
+
+B. Both the Training MSE and Test MSE decrease monotonically.
+
+C. The Training MSE follows a U-shape, while the Test MSE decreases monotonically.
+
+D. The Training MSE increases, while the Test MSE decreases due to the "curse of dimensionality."
+
+**4. In the context of the Bias-Variance Trade-off, "Underfitting" is characterized by which of the following?**
+
+A. Low Bias and High Variance.
+
+B. High Bias and Low Variance.
+
+C. High Bias and High Variance.
+
+D. Low Bias and Low Variance.
+
+#### Part 2: "The High-Stakes Housing Model"
+
+Your team of data scientists has been hired by a real estate tech firm. You have a dataset of $n = 150$ homes. Your task is to select the best polynomial degree ($d$) to predict house prices based on one variable: $x=$ square footage. To ensure the model generalizes, you run three different validation schemes: the validation set approach (50/50 split), LOOCV, and 10-fold CV.
+
+**The Challenge:**
+
+The CEO wants a single model to put into production tomorrow. If the model overfits or underfits, the company loses millions in over-valued inventory or missing out on profitable opportunities.
+
+**Based on the principles of parsimony and the bias-variance trade-off discussed in *ISLR2*, which model should your team officially recommend for production?**
+
+A. $d=5$, because the Validation Set approach showed the lowest absolute MSE at that point.
+
+B. $d=4$, because 10-fold CV is the industry standard and $d=4$ performed just as well as $d=2$ without the risk of underfitting.
+
+C. $d=2$, because it is the most parsimonious model that was selected by the most stable, low-bias method (LOOCV).
+
+D. $d=1$ (Linear), because the instability of the validation set suggests that any polynomial is likely just fitting noise in a small sample of $n=150$.
+
+E. $d=2$, because the 10-fold CV results for $d=2$ and $d=3$ are so similar that we should choose the simpler model to reduce variance.
+
+### Code is below
+
+```{r}
+# Load libraries
+suppressPackageStartupMessages(library(tidyverse))
+library(boot)
+
+# 1. Generate Synthetic Housing Data (n=150)
+set.seed(42) # For reproducibility
+n <- 150
+x <- runif(n, 0, 10) # Square footage (scaled)
+# True relationship is quadratic with noise
+y <- 50 + 20*x - 1.5*x^2 + rnorm(n, sd = 10) 
+housing_data <- data.frame(x = x, y = y)
+
+# 2. Setup storage for results
+degrees <- 1:5
+val_mse <- numeric(length(degrees))
+loocv_mse <- numeric(length(degrees))
+k10_mse <- numeric(length(degrees))
+
+# --- TEST 1: Validation Set Approach (50/50 Split) ---
+# We use a specific seed here to show how it can produce "wrong" results
+set.seed(7) 
+train_idx <- sample(1:n, n/2)
+for (d in degrees) {
+  fit <- lm(y ~ poly(x, d), data = housing_data, subset = train_idx)
+  pred <- predict(fit, housing_data[-train_idx, ])
+  val_mse[d] <- mean((housing_data$y[-train_idx] - pred)^2)
+}
+
+# --- TEST 2: LOOCV ---
+for (d in degrees) {
+  glm_fit <- glm(y ~ poly(x, d), data = housing_data)
+  loocv_mse[d] <- cv.glm(housing_data, glm_fit)$delta[1]
+}
+
+# --- TEST 3: 10-Fold CV ---
+set.seed(8) # For fold consistency
+for (d in degrees) {
+  glm_fit <- glm(y ~ poly(x, d), data = housing_data)
+  k10_mse[d] <- cv.glm(housing_data, glm_fit, K = 10)$delta[2] # Adjusted delta
+}
+
+# 3. Consolidate results for Comparison
+results <- data.frame(
+  Degree = degrees,
+  Validation = val_mse,
+  LOOCV = loocv_mse,
+  K10 = k10_mse
+)
+
+print(results)
+
+# 4. Visualization
+ggplot(results, aes(x = Degree)) +
+  geom_line(aes(y = Validation, color = "Validation Set (50/50)"), linewidth = 1) +
+  geom_line(aes(y = LOOCV, color = "LOOCV"), linewidth = 1) +
+  geom_line(aes(y = K10, color = "10-Fold CV"), linewidth = 1) +
+  labs(title = "Conflicting CV Signals", y = "Estimated MSE", color = "Method") +
+  theme_minimal()
+```

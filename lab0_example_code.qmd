@@ -1,0 +1,213 @@
+---
+title: "Lab0.part3"
+author: "Eric Vance"
+format: pdf
+editor: visual
+date: 2026-01-23
+---
+
+```{r}
+library(class)
+library(tidyverse)
+```
+
+## Lab0, part 3
+
+Find the misclassification rate for K-nearest neighbors (KNN) for a range of k values, given a complicated true generating model. Plot the decision boundary for the team's "best" value of k.
+
+I also want individuals to practice walking through the steps of Q1, Q2, and Q3 for this "project", so they will have to describe a plausible story for Q1 (what is Y, X1, and X2, and why do we care?), Q2 (make predictions given X1 and X2 and find the optimal k and compute the misclassification rates for values of k), and Q3 (what is the answer, and what are some ethical implications?)
+
+### Generating Model
+
+We have a logistic regression generating model. Given $x_1 \in [0,1]$ and $x_2 \in [0,1], Y \sim Ber(p)$, where $p$ is related to $x_1$ and $x_2$ through the logistic link function: $\log(\frac{p}{(1-p)}) = x_1 -2x_2 -2{x_1}^{2} + {x_2}^{2} + 3{x_1}{x_2}$, where $\log$ is the natural log, sometimes written as $\ln$.
+
+The code for this is below.
+
+```{r}
+#Generative model
+set.seed(116) #setting a random seed so that I could reproduce everything exactly if I wanted to
+
+generate_y <- function(x1,x2) { #two input parameters to generate the output y
+  logit <- x1 -2*x2 -2*x1^2 + x2^2 + 3*x1*x2
+  p <- exp(logit)/(1+exp(logit)) #apply the inverse logit function
+  y <- rbinom(1,1,p) #y becomes a 0 (with prob 1-p) or a 1 with probability p
+}
+```
+
+What we really want is a set of say 100 predictors (x1, x2), and then 100 outcomes. Then we plot all three variables just to see what the generating model is doing.
+
+```{r}
+# Generate a dataset with 100 points
+set.seed(116)
+n = 100
+X1 <- runif(n,0,1)
+X2 <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 100 y's
+Y <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y[i] <- generate_y(X1[i],X2[i])
+}
+
+sum(Y) #How many 0's and 1's were predicted? In this training set, 42% were 1's. However, almost 48% are 1's when n is large. That's quite close to 50/50 so we shouldn't have issues with "imbalance," which is something we'll learn about later in the semester.
+
+training <- cbind(X1,X2,Y) #combining all of my variables into a training dataset
+ggplot(data=training, aes(x=X1, y=X2, color=Y)) +
+  geom_point()
+
+```
+
+This generating function seems to produce Y's with some spatial pattern in the X1, X2 parameter space, but the regions of 0's and 1's are not very well separated. How well will KNN do to classify/predict Y given new x1 and x2 values?
+
+### Calculating Misclassification Rates
+
+We need to evaluate how well a model does in classifying/predicting Y. We're going to use KNN because that's the only model in our toolbelt so far.
+
+Misclassification rate is the percentage of times the model gets it wrong. In typical cases, we will have a training misclassification rate and a test misclassification rate. In our case, we have only two outcomes (0 or 1). Just by guessing at random, our training misclassification would be 50%. If we just guessed 1 all the time, our misclassification rate would be around 52.04% on average (because the number of 1's when n is very large is about 47.96%). Students will generate code to calculate the misclassification rate.
+
+For now, we're just going to focus on training misclassification rates. So, given 100 training data points (X1, X2, Y), how well does KNN do?
+
+#### For KNN with k=4
+
+Let's fit a KNN with k=4 to our training dataset (seed=116). We will use KNN to make predictions on a test set, so we need to create a test set too. So, create the test dataset (seed=121) first.
+
+```{r}
+# Create the training dataset as above using seed=116
+# Create a testing dataset using seed=121
+
+set.seed(121)
+n = 100
+X1 <- runif(n,0,1)
+X2 <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 100 y's
+Y <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y[i] <- generate_y(X1[i],X2[i])
+}
+
+sum(Y) #43 1's, which is only slightly closer to the 47.96% true rate
+testing <- cbind(X1,X2,Y)
+
+#Let's plot the test set. Does it look like the training set? Yeah, looks similar.
+ggplot(data=testing, aes(x=X1, y=X2, color=Y)) +
+  geom_point()
+
+k=4
+predicted.ys <- knn(train = training[,1:2], test = testing[,1:2], cl=training[,3],k=5)
+
+
+#Let's try with a bigger training set.
+
+```
+
+New code chuck to generate a bigger training set and then refit a KNN model.
+
+```{r}
+set.seed(116)
+n = 10000
+X1 <- runif(n,0,1)
+X2 <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 100 y's
+Y <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y[i] <- generate_y(X1[i],X2[i])
+}
+
+sum(Y) #4781
+
+training.big <- cbind(X1,X2,Y) 
+
+set.seed(121)
+n = 10000
+X1 <- runif(n,0,1)
+X2 <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 100 y's
+Y <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y[i] <- generate_y(X1[i],X2[i])
+}
+
+sum(Y) #4777
+
+testing.big <- cbind(X1,X2,Y) 
+```
+
+Now that we have a big training set, let's see if that trains the KNN model any better. We also need a bigger testing set.
+
+```{r}
+big.predicted.ys <- knn(train = training.big[,1:2], test = testing.big[,1:2], cl=training.big[,3],k=4)
+
+1-sum(big.predicted.ys==testing.big[,3])/10000
+```
+
+So now that we have a training set (seed=116) and a test set (seed=121), we can fit a KNN model, plot the decision boundaries, and calculate the misclassification rate.
+
+```{r}
+k=4
+predicted.ys <- knn(train = training[,1:2], test = testing[,1:2], cl=training[,3],k=k)
+
+# Plot the training points and then the contours from the KNN fitted model
+
+library(class)
+library(ggplot2)
+
+# 1. Setup the Grid correctly
+# Ensure the grid names match your training column names (X1, X2)
+testing.grid <- expand.grid(X1 = seq(0, 1, by = .01), 
+                            X2 = seq(0, 1, by = .01))
+
+# 2. Run KNN on the grid
+# We convert the output to numeric so geom_contour can read it
+predicted.grid <- knn(train = training[,1:2], 
+                      test = testing.grid, 
+                      cl = training[,3], 
+                      k = 4)
+
+# 3. Combine grid coordinates with predictions
+# Instead of cbind with sequences, attach predictions to the existing grid
+predicted.gridxy <- testing.grid
+predicted.gridxy$Y <- as.numeric(predicted.grid) -1 #as.numeric converts the 0-1 levels into numbers 1 and 2. We reconvert 1 to 0 and 2 to 1 by subtracting 1.
+
+# 4. Plotting
+ggplot() +
+  # Background: Show the decision regions
+  geom_raster(data = predicted.gridxy, aes(x = X1, y = X2, fill = as.factor(Y)), alpha = 0.3) +
+  # The Boundary: The contour line where Y changes
+  geom_contour(data = predicted.gridxy, aes(x = X1, y = X2, z = Y), 
+               breaks = 1.5, color = "black", size = 1) +
+  # The actual data points
+  geom_point(data = training, aes(x = X1, y = X2, color = as.factor(Y))) +
+  scale_fill_manual(values = c("orange", "cornflowerblue"), name = "Region") +
+  scale_color_manual(values = c("darkorange", "blue"), name = "Actual Class") +
+  labs(title = "KNN Decision Boundary (k=4)",
+       subtitle = "Black line indicates the Bayes-style decision boundary") +
+   geom_contour(data = predicted.gridxy, aes(x = X1, y = X2, z = Y +1),  
+               breaks = 1.5, color = "black", size = 1) + # Add 1 to Y to make the contours actually plot. I don't know why the black boundary won't plot if z is 0 or 1.
+theme_minimal()
+
+
+```
+
+#### Misclassification rate
+
+We need to calculate misclassification rate. How well did KNN with k=4 do using our testing dataset as the truth?
+
+```{r}
+misclass_rate <- function(predictions, test.truth) { #Given the model predictions and the true classifications
+  1-(sum(predictions==test.truth)/length(predictions))
+}
+
+misclass_rate(predicted.ys,testing[,3])
+
+#Let's try creating a confusion matrix
+(cm <- table(testing[,3], predicted.ys) )
+```
+
+### Solution
+
+I want to use the same training set and the same testing set for k=1...12. Plot the misclassification rates. Maybe go beyond k=12, though no KNN model seems like it will do particularly well.
+
+The only thing that changes when k changes are the predicted.ys, so create a matrix for them.

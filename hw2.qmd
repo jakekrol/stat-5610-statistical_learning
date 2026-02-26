@@ -1,0 +1,515 @@
+---
+title: "HW2"
+author: "Jacob Krol"
+format: pdf
+editor: visual
+date: 2026-02-20
+---
+
+## Homework 2
+
+**Due: 11:59PM Friday, February 20 on Canvas**
+
+This is an individual homework. Individuals can talk about the homework with their teammates, but must submit their own work (no copying). Doing the math by hand and then scanning (or photographing) a **legible** pdf is acceptable. Using latex notation in Quarto is preferred. Each person on a team will choose a different data set for their Part 2 applied problem.
+
+1.  You will learn some of the math underlying regression methods.
+2.  You will practice applying linear regression on a plausibly real problem.
+3.  Grad students must do both math problems. Undergrads can choose one. Some version of the math questions might be on the final exam. You may want to reference the other textbook *ESL* for these problems.
+4.  Submit your homework as a pdf. Show your code for the applied problem.
+
+### Math of Statistical Learning
+
+#### Problem 1
+
+Suppose ${\mathbf{Y}} = {\mathbf{X}}{\boldsymbol{\beta}} + {\boldsymbol{\varepsilon}}$ where ${\boldsymbol{\varepsilon}}$ consists of uncorrelated, mean zero random variables each with variance $\sigma^2$, so that ${\textit Var}({\boldsymbol{\varepsilon}}) = \sigma^2 I$.\
+For a smoothing parameter $\lambda > 0$, let $\hat{\boldsymbol{\beta}}\_{ridge} = ({\mathbf{X}}{^{\textit T}}{\mathbf{X}} + \lambda {\mathbf{l}})^{-1} {\mathbf{X}}{^{\textit T}}{\mathbf{Y}}$ be the ridge regression estimate of ${\boldsymbol{\beta}}$. In this problem you will derive the mean squared error (MSE) of $\hat{\boldsymbol{\beta}}_{ridge}$, and compare it to the MSE of the ordinary least squares estimator.
+
+a.  Suppose ${\mathbf{Z}}$ is a random vector with mean ${\boldsymbol{\mu}}$ and covariance matrix $\Sigma$. If ${\mathbf{M}}$ is a matrix, show that ${\mathbb{E}}({\mathbf{Z}}{^{\textit T}} {\mathbf{M}}{\mathbf{Z}}) = {\boldsymbol{\mu}}{^{\textit T}}{\mathbf{M}}{\boldsymbol{\mu}} + {\textit tr}({\mathbf{M}} \Sigma)$ \[hint: add and subtract ${\boldsymbol{\mu}}$ to ${\mathbf{Z}}$ on the left and use $\Sigma = {\mathbb{E}}(({\mathbf{Z}}-{\boldsymbol{\mu}})({\mathbf{Z}}-{\boldsymbol{\mu}}){^{\textit T}})$\].
+
+b.  Show
+
+
+```{r}
+# ${\textit MSE}(\lambda) = {\mathbb{E}}({\boldsymbol{\beta}} -
+# \hat{{\boldsymbol{\beta}}}_{ridge})^{\textit T}({\boldsymbol{\beta}} - 
+# \hat{{\boldsymbol{\beta}}}_{ridge})$
+
+# and then ${\textit MSE}(\lambda) = {\boldsymbol{\beta}}^{\textit T}({\mathbf{l}} 
+# -{\mathbf{M}}(\lambda){\mathbf{X}})^{\textit T}}({\mathbf{l}} 
+# -{\mathbf{M}}(\lambda){\mathbf{X}}){\boldsymbol{\beta}}  + \sigma^2{\textit 
+# tr}({\mathbf{M}}(\lambda)^{\textit T}{\mathbf{M}}(\lambda))$
+
+# where ${\mathbf{M}}(\lambda) = ({\mathbf{X}}{^{\textit T}}{\mathbf{X}} + 
+# \lambda{\mathbf{l}})^{-1}{\mathbf{X}}{^{\textit T}}$.
+```
+
+c.  Find the MSE for the OLS estimators, i.e., plug in $\lambda = 0$ and simplify.
+
+d.  Simplify parts (b) and (c) for $p=1$, i.e., only one feature: $Y = \beta_1 X_1 + {\varepsilon}$. Are there any choices of $\lambda$ for which the MSE under ridge regression is strictly less than the MSE under OLS?
+
+#### Problem 2
+
+a.  Show that the expectation of the ridge regression coefficient estimator is $\left( \mathbf{X^TX} + \lambda \mathbf{I}\_p \right)^{-1} \mathbf{X^TX} \boldsymbol{\beta}$
+
+b.  Considering $\lambda > 0$, is it possible for the ridge regression coefficient estimator to be unbiased?
+
+c.  Write an expression for ${\textit{Bias}}(\hat{\boldsymbol{\beta}}_{RR}; \boldsymbol{\beta)}.$ Hint, first show that an equivalent expression for the expectation is $\boldsymbol{\beta} - \lambda \left( \mathbf{X^TX} + \lambda \mathbf{I}_p \right)^{-1} \boldsymbol{\beta}$
+
+d.  What is the effect on the bias as $\lambda \to \infty$? Justify your answer.
+
+e.  What is the effect on the ridge regression coefficient estimator as $\lambda \to \infty$? Justify your answer.
+
+### Applying Model Selection, Shrinkage, and Cross Validation
+
+In this applied problem, you will do a "complete" analysis, starting with Q1 (what are the data?, what is the research question?), then fitting several models and comparing them using cross validation (Q2), and finally selecting the best model, using it to answer your research question, and reflecting on the ethics of the problem (Q3).
+
+A complete analysis has many components. Your analysis should address the points below.
+
+1.  Find a dataset that has a Y continuous response and many **X** predictors. Briefly describe what the data set is. What is Y? What is **X**? Suggestion: Use a data set built into R, either one already used as an example in ISLR2, or any other data set you can find that you find interesting.
+
+2.  Q1: Determine your research question, which is very likely to be something like, “Find the set of predictor variables from **X** that best explains/predicts Y.” Or it could be, “Understand the importance of X1 on Y, given some other covariates from **X**.”
+
+3.  Q1: How might the answer to your research question be used? Why do you care? Why is this important? What benefit will knowing the answer have?
+
+4.  For Q2, you will use cross validation (either k-fold or LOOCV) to estimate the test error of at least three stat learning methods from this list (you must use Lasso and at least one method from a-d, but the more methods you compare, the better because then you’ll have more “tools in your toolbox”):
+
+<!-- -->
+
+a.  Best subset regression
+b.  Forward selection
+c.  Backward selection
+d.  Hybrid selection
+e.  Ridge regression
+f.  **Lasso**
+g.  PCR
+h.  PLS
+
+<!-- -->
+
+5.  You must argue based on the Q1 context of the data set and your research question why your chosen statistical learning methods are appropriate for the Q1 of your problem, i.e., the context of your data set and your research question.
+
+6.  Q2: comment on the size of $\lambda$ for when you fit Lasso and/or Ridge regression. Is $\lambda$ relatively small, medium, or large? That is, how much shrinkage gave you the best test/CV MSE? How does the MSE compare to fitting a linear regression with all of the X’s (if $p<n$) or with the MSE of your a-d model selection algorithm?
+
+7.  How does the test/CV MSE of the models compare?
+
+8.  Q3: Which model did you choose? Why? What about Q1 and Q3 made you choose that model?
+
+9.  Q3: What is the answer to your research question? How might this answer be used? What conclusions or recommendations do you have based on your statistical analysis?
+
+10. Q3: Comment on some aspects of the ethics of this problem, using the ethical principles covered in the readings and in-class at the beginning of the semester.
+
+## Answers
+
+### Problem 1
+
+#### Problem 1a
+
+The goal is to show that the expectation of quadratic form of a random variable can be decomposed into i) quadratic form of the mean and ii) the trace contribution of the covariance matrix.
+
+$$
+ E[Z^T M Z] = \mu^T M \mu + tr(M \Sigma)
+$$
+
+From the hint, it was suggested to write $Z$ as $Z= \mu + (Z - \mu)$ and use the fact that $\Sigma = E[(Z - \mu)(Z - \mu)^T]$.
+
+Substituting the hint for $Z$ and expanding gives
+
+$$
+\begin{aligned}
+    Z^TMZ &= (\mu + (Z - \mu))^T M (\mu + (Z - \mu)) \\
+    &= (\mu^T + (Z-\mu)^T) M (\mu + (Z - \mu)) \\
+    &= \mu^TM\mu + \mu^TM(Z-\mu) + (Z-\mu)^TM\mu + (Z-\mu)^TM(Z-\mu) 
+\end{aligned}
+$$
+
+Apply expectation over addition.
+
+The first term $E[\mu^TM\mu]$ is just $\mu^TM\mu$ since it does not depend on $Z$.
+
+The second term $E[\mu^TM(Z-\mu)]$ is zero since $E[Z-\mu] = 0$.
+
+The third term $E[(Z-\mu)^TM\mu]$ is also zero since $E[Z-\mu] = 0$.
+
+Using the trace identity ($x^TAx = tr(Axx^T)$), the fourth term $E[(Z-\mu)^TM(Z-\mu)]$ can be written as $E[tr(M(Z-\mu)(Z-\mu)^T)]$. $M$ can be factored out of the expectation, and the expectation of $(Z-\mu)(Z-\mu)^T$ is $\Sigma$.
+
+Combining the first and fourth terms gives
+
+$$
+    E[Z^T M Z] = \mu^T M \mu + tr(M \Sigma)
+$$
+
+#### Problem 1b
+
+The MSE of ridge is
+
+$$
+\begin{aligned}
+MSE(\lambda) &= E[(\beta - \hat{\beta}_{ridge})^T(\beta - \hat{\beta}_{ridge})] \\
+&= \beta^T(I - M(\lambda)X)^T(I - M(\lambda)X)\beta + \sigma^2 tr(M(\lambda)^TM(\lambda))
+\end{aligned}
+$$
+
+Let $M=M(\lambda)$ and write ridge in linear form
+
+$$
+\hat{\beta}_{ridge} = MY = (X^TX + \lambda I)^{-1}X^TY
+$$
+
+Substitute $Y = X\beta + \varepsilon$
+
+$$
+\hat{\beta}_{ridge} = M(X\beta + \varepsilon) = MX\beta + M\varepsilon
+$$
+
+
+The estimation error is 
+
+$$
+\begin{aligned}
+    \beta - \hat{\beta}_{ridge} &= \beta - MX\beta - M\varepsilon \\
+    = (I - MX)\beta - M\varepsilon
+\end{aligned}
+$$
+
+Let $A = (I - MX)$, so $\beta - \hat{\beta}_{ridge} = A\beta - M\varepsilon$.
+
+Expand into quadratic form.
+
+$$
+\begin{aligned}
+    (\beta - \hat{\beta}_{ridge})^T(\beta - \hat{\beta}_{ridge}) &= (A\beta - M\varepsilon)^T(A\beta - M\varepsilon) \\
+    &= \beta^TA^TA\beta - 2\beta^TA^TM\varepsilon + \varepsilon^TM^TM\varepsilon
+\end{aligned}
+$$
+
+Apply expectation over addition.
+
+$$
+\begin{aligned}
+    MSE(\lambda) &= E[\beta^TA^TA\beta] - 2E[\beta^TA^TM\varepsilon] + E[\varepsilon^TM^TM\varepsilon] \\
+    &= \beta^TA^TA\beta + 0 + \sigma^2 tr(M^TM)
+\end{aligned}
+$$
+
+The first term is itself ($\beta^TA^TA\beta$ does not depend on $\varepsilon$), the second term is zero since $E[\varepsilon] = 0$, and the third term can be written as $\sigma^2 tr(M^TM)$ using the result from part a.
+
+#### Problem 1c
+
+The MSE of OLS ($\lambda = 0$) means that $M(0) = (X^TX)^{-1}X^T$.
+
+The bias terms is zero since $M(0)X = (X^TX)^{-1}X^TX = I$. Which makes sense because OLS is unbiased.
+
+The variance term can be simplifiied.
+
+Note that $M(0)^TM(0) = X(X^TX)^{-1}(X^TX)^{-1}X^T$. 
+
+And the trace property $tr(ABC) = tr(CAB)$, can be used to write $tr(X(X^TX)^{-1}(X^TX)^{-1}X^T) = tr((X^TX)^{-1}X^TX(X^TX)^{-1})$.
+
+Therefore, the MSE of OLS is $\sigma^2 tr((X^TX)^{-1})$ and any error in the estimation of $\beta$ is due to variance, not bias.
+
+#### Problem 1d
+
+For the case $p=1$, simplify the MSE expressions from parts (b) and (c).
+
+Let $s = x^Tx$ (a scalar). For $p=1$, $M(\lambda) = (x^Tx + \lambda)^{-1}x^T = \frac{1}{s+\lambda}x^T$.
+
+This gives $M(\lambda)x = \frac{s}{s+\lambda}$ and $I - M(\lambda)x = \frac{\lambda}{s+\lambda}$.
+
+From part b, the ridge MSE is
+
+$$
+MSE_{ridge}(\lambda) = \beta^2\left(\frac{\lambda}{s+\lambda}\right)^2 + \sigma^2 \frac{s}{(s+\lambda)^2} = \frac{\beta^2\lambda^2 + \sigma^2 s}{(s+\lambda)^2}
+$$
+
+From part c, the OLS MSE is $MSE_{OLS} = \frac{\sigma^2}{s}$.
+
+To determine when ridge has strictly lower MSE than OLS, the inequality must be satisfied
+
+$$
+\frac{\beta^2\lambda^2 + \sigma^2 s}{(s+\lambda)^2} < \frac{\sigma^2}{s}
+$$
+
+Rearrnging to factor out $\lambda^2$ gives
+
+$$
+\begin{aligned}
+s(\beta^2\lambda^2 + \sigma^2 s) &< \sigma^2(s+\lambda)^2 \\
+s\beta^2\lambda^2 + \sigma^2 s^2 &< \sigma^2 s^2 + 2\sigma^2 s\lambda + \sigma^2\lambda^2 \\
+s\beta^2\lambda^2 - \sigma^2\lambda^2 &< 2\sigma^2 s\lambda \\
+\lambda^2(s\beta^2 - \sigma^2) &< 2\sigma^2 s\lambda
+\end{aligned}
+$$
+
+If $s\beta^2 > \sigma^2$, then the term $(s\beta^2 - \sigma^2)$ is positive and the inequality can be rearranged to give
+
+$$
+\lambda < \frac{2\sigma^2 s}{s\beta^2 - \sigma^2}
+$$
+
+Yes, there exist choices of $\lambda$ for which the MSE under ridge regression is strictly less than the MSE under OLS. Specifically, when $0 < \lambda < \frac{2\sigma^2 s}{s\beta^2 - \sigma^2}$, ridge outperforms OLS by accepting a small amount of bias in exchange for a larger reduction in variance.
+
+### Problem 2
+
+### Problem 2a
+
+$\hat{\beta}_{RR}$ is defined as
+
+$$
+\hat{\beta}_{RR} = (X^TX + \lambda I)^{-1}X^TY
+$$
+
+Apply expectation.
+
+$$
+E[\hat{\beta}_{RR}] = E[(X^TX + \lambda I)^{-1}X^TY]
+$$
+
+X and $\lambda I$ are deterministic, and they can be factored out as constants.
+
+$$
+E[\hat{\beta}_{RR}] = (X^TX + \lambda I)^{-1}X^TE[Y]
+$$
+
+Substituting $Y = X\beta + \varepsilon$ gives
+
+$$
+E[\hat{\beta}_{RR}] = (X^TX + \lambda I)^{-1}X^T(X\beta + E[\varepsilon])
+$$
+
+Since it is assumed that $E[\varepsilon] = 0$, the final expectation is
+
+$$
+E[\hat{\beta}_{RR}] = (X^TX + \lambda I)^{-1}X^TX\beta
+$$
+
+
+#### Problem 2b
+
+No, for $\lambda > 0$, the $\hat{\beta}_{RR}$ cannot be unbiased. 
+
+In part a, I showed that 
+
+$$
+E[\hat{\beta}_{RR}] = (X^TX + \lambda I)^{-1}X^TX\beta
+$$
+
+But unbiasedness means that $E[\hat{\beta}_{RR}] = \beta$.
+
+Therefore, unbiased ridge would require
+
+$$
+(X^TX + \lambda I)^{-1}X^TX\beta = \beta
+$$
+
+Meaning, $(X^TX + \lambda I)^{-1}X^TX = I$.
+
+Rearranging
+
+$$
+X^TX = X^TX + \lambda I
+$$
+
+Therefore, for an unbiased ridge $\lambda I = 0$, but this is not possible given the constraint that $\lambda > 0$.
+
+#### Problem 2c
+
+Again from part a,$E[\hat{\beta}_{RR}] = (X^TX + \lambda I)^{-1}X^TX\beta$.
+
+To show the hint equivalence, factor out $\beta$ and write $I = (X^TX + \lambda I)(X^TX + \lambda I)^{-1}$:
+
+$$
+\begin{aligned}
+\beta - \lambda(X^TX + \lambda I)^{-1}\beta &= [I - \lambda(X^TX + \lambda I)^{-1}]\beta \\
+&= [(X^TX + \lambda I)(X^TX + \lambda I)^{-1} - \lambda(X^TX + \lambda I)^{-1}]\beta \\
+&= [(X^TX + \lambda I - \lambda I)](X^TX + \lambda I)^{-1}\beta \\
+&= (X^TX + \lambda I)^{-1}X^TX\beta = E[\hat{\beta}_{RR}]
+\end{aligned}
+$$
+
+By definition, bias is $E[\hat{\beta}_{RR}] - \beta$, so:
+
+$$
+\text{Bias}(\hat{\beta}_{RR}; \beta) = -\lambda(X^TX + \lambda I)^{-1}\beta
+$$
+
+#### Problem 2d
+
+The bias approaches $-\beta$ as $\lambda \to \infty$.
+
+As $\lambda$ becomes very large, the term $\lambda(X^TX + \lambda I)^{-1}$ approaches $I$.
+
+$$
+(X^TX + \lambda I) = \lambda(I + \frac{1}{\lambda}X^TX)
+$$
+
+For $\lambda \to \infty$,
+$$
+\lambda(\frac{1}{\lambda} X^TX + I) \to \lambda I
+$$
+
+Therefore, the inverse approaches $\frac{1}{\lambda}I$.
+
+Substituting back into the bias expression cancncel $\lambda$ and gives
+
+$$
+\begin{aligned}
+\text{Bias}(\hat{\beta}_{RR}; \beta) &= -\lambda(X^TX + \lambda I)^{-1}\beta \\
+&= -\lambda \frac{1}{\lambda}I\beta \\
+&= -\beta
+\end{aligned}
+$$
+
+#### Problem 2e
+
+The ridge coefficient approaches a zero vector as $\lambda \to \infty$.
+
+From part a, $\hat{\beta}_{RR} = (X^TX + \lambda I)^{-1}X^TY$.
+
+
+Using the same factorization from 2d (for $\lambda \to \infty$),
+$$
+\lambda(\frac{1}{\lambda} X^TX + I) \to \lambda I
+$$
+
+Again, the inverse approaches $\frac{1}{\lambda}I$.
+
+Substituting back into the ridge regression estimator gives
+$$
+\begin{aligned}
+\hat{\beta}_{RR} &= (X^TX + \lambda I)^{-1}X^TY \\
+&= \frac{1}{\lambda}I X^TY \\
+&= \frac{1}{\lambda}X^TY
+\end{aligned}
+$$
+
+$\lambda \to \infty$ will dominate the expression and bring the ridge coefficients to 0.
+
+### Part 3. Application
+
+#### Part 3.1
+
+I used the ISLR2 hitters dataset with 1987 salary as a continous response variable ($Y$) and $X$ was the remaining 19 predictors, such as the number of hits in the previous year (1986). In general, $X$ are player stats from the 1986 season.
+
+#### Part 3.2
+
+A hypothetical scenario is that I am a sports agent representing a player in-between the seasons of 1986 and 1987, and I want to use a regression model to negotiate my client's (a baseball player) salary for the next season given their previous season performance. Formally, the research question is what model best predicts for 1987 salary based on the 1986 season stats? Follow-up use-cases may include understanding which stats are most important for salary, and I could communicate to my client which stats they will need to improve for salary increases in future seasons.
+
+#### Part 3.3
+
+The answer to the research question would provide a model to guide salary negotiations for my client. I care because my job as a sports agent is to maximize my client's salary and hapiness. Therefore, the stats dependent price model would help me make reasonable salary requests and suggest ways for my client to increase their salary in future seasons.
+
+#### Part 3.4
+
+```{r}
+set.seed(123)
+library(ISLR2)
+library(glmnet)
+library(pls)
+library(tidyverse)
+library(caret)
+library(patchwork)
+data(Hitters)
+
+# drop missing predictors and/or responses
+Hitters <- Hitters |> drop_na()
+# setup 10-fold cv
+train_control <- trainControl(method = "cv", number = 10)
+# lambdas to search
+lambdas <- 10^seq(-6, 3, by = 1)
+# lasso
+lasso_fit <- train(Salary ~ ., data = Hitters, method = "glmnet", 
+                   trControl = train_control, 
+                   tuneGrid = expand.grid(alpha = 1, lambda = lambdas))
+
+# ridge
+ridge_fit <- train(Salary ~ ., data = Hitters, method = "glmnet", 
+                   trControl = train_control, 
+                   tuneGrid = expand.grid(alpha = 0, lambda = lambdas))
+
+# pcr
+pcr_fit <- train(Salary ~ ., data = Hitters, method = "pcr", 
+                 trControl = train_control, 
+                 tuneGrid = expand.grid(ncomp = 1:19))
+
+# plot avg mse across folds
+lasso_results <- lasso_fit$results |>
+    mutate(MSE = RMSE^2) |>
+    select(lambda, MSE)
+ridge_results <- ridge_fit$results |>
+    mutate(MSE = RMSE^2) |>
+    select(lambda, MSE)
+pcr_results <- pcr_fit$results |>
+    mutate(MSE = RMSE^2) |>
+    select(ncomp, MSE)
+
+# ols
+ols_fit <- train(Salary ~ ., data = Hitters, method = "lm", trControl = train_control)
+ols_mse <- ols_fit$results$RMSE^2
+cat("OLS MSE:", ols_mse, "\n")
+# get vertical axes bounds
+y_min <- min(c(lasso_results$MSE, ridge_results$MSE, pcr_results$MSE, ols_mse))
+y_max <- max(c(lasso_results$MSE, ridge_results$MSE, pcr_results$MSE, ols_mse))
+p1 <- ggplot(lasso_results, aes(x = lambda, y = MSE)) +
+    geom_line(color = "blue", linewidth = 1) +
+    geom_point(color = "blue") +
+    geom_hline(yintercept = ols_mse, linetype = "dashed", color = "black", linewidth = 0.8) +
+    scale_x_log10() +
+    coord_cartesian(ylim = c(y_min, y_max)) +
+    theme_minimal() +
+    labs(title = "Lasso", x = expression(lambda~(log~scale)), y = "10-fold CV MSE")
+p2 <- ggplot(ridge_results, aes(x = lambda, y = MSE)) +
+    geom_line(color = "red", linewidth = 1) +
+    geom_point(color = "red") +
+    geom_hline(yintercept = ols_mse, linetype = "dashed", color = "black", linewidth = 0.8) +
+    scale_x_log10() +
+    coord_cartesian(ylim = c(y_min, y_max)) +
+    theme_minimal() +
+    labs(title = "Ridge", x = expression(lambda~(log~scale)), y = "10-fold CV MSE")
+p3 <- ggplot(pcr_results, aes(x = ncomp, y = MSE)) +
+    geom_line(color = "darkgreen", linewidth = 1) +
+    geom_point(color = "darkgreen") +
+    geom_hline(yintercept = ols_mse, linetype = "dashed", color = "black", linewidth = 0.8) +
+    coord_cartesian(ylim = c(y_min, y_max)) +
+    theme_minimal() +
+    labs(title = "PCR", x = "Number of Components", y = "10-fold CV MSE")
+# combine plots using patchwork
+p1 | p2 | p3
+
+# print best mse and hyperparameters
+cat("Best Lasso MSE:", min(lasso_results$MSE), "at lambda =", lasso_fit$bestTune$lambda, "\n")
+cat("Best Ridge MSE:", min(ridge_results$MSE), "at lambda =", ridge_fit$bestTune$lambda, "\n")
+cat("Best PCR MSE:", min(pcr_results$MSE), "at ncomp =", pcr_fit$bestTune$ncomp, "\n")
+```
+
+
+#### Part 3.5
+
+I chose to fit Lasso, Ridge, and PCR models. Lasso and ridge are well-known to have good predictive performance compared to subset approaches. PCR was chosen because it explicitly could address correlated predictors since baseball statistics are often correlated. For example, a player with high play time will generally have many other higher stats: hits, runs, etc. Again, the goal of this model is prediction, not yet inference, so I chose models that will hopefully have a significant reduction in variance compared to OLS and acheive better test MSE.
+
+#### Part 3.6
+
+I tried a wide range of lambda values: $10^{-6}, 10^{-5}, ..., 10^3$, and the best lambdas were $\lambda=1$ (medium) for lasso and $\lambda=10$ (medium-large) for ridge. However, from the lambda versus MSE plots, its clear that ridge performed similar for $\lambda$ values from $10^{-6},...,10^1$, so even a small amount of shrinkage would have yielded similar MSE.
+
+Surprisingly, OLS performs similar to the best models of all shrinkage methods (dashed horiztonal line in each plot). Ridge and PCR could slightly outperform OLS while lasso performed slightly worse. Therefore, the variance decrease of the shrinkage methods generally is not offsetting the increased bias.
+
+#### Part 3.7
+
+A few themes are clear from the MSE versus hyperparameter plots. First, ridge and PCR could slightly outperform OLS, while lasso performed slightly worse. Second, lasso and ridge both perform better with smaller lambda and therefore less coefficient shrinkage. Third, PCR seems to capture most of the variation in the data using about 3 components which suggest correlation among the predictors. However, PCR's predictive performance only gets better than OLS once 18/19 components are used. 
+
+In summary, lower shrinkage led to better predictive performance of salary, and the PCR results do suggest that there is correlation among the predictors.
+
+Finally, the best MSEs for the models were: PCR=110015 < ridge=110086.9 < OLS=110914.6 < lasso=112177.3.
+
+#### Part 3.8
+
+Since, the goal was to best estimate salary for my client, I chose the model with minimal test MSE: PCR with 18 components.
+The research question was what model best predicts for 1987 salary based on the 1986 season stats? The data shows that PCR with 18 components is the best model for predicting salary.
+
+
+#### Part 3.9
+
+Again, the answer to the research question is that PCR with 18 components is the best model for predicting salary. This model would be used to guide salary negotiations for my client. Future work would include investigating the principle components to understand which stats are most important for salary, and I could communicate to my client which stats they will need to improve for salary increases in future seasons.
+
+#### Part 3.10
+
+An ethical consideration of this problem is that I have a bias towards my client and want to maximize their salary. I must avoid any temptation or personal incentive to inflate the salary predictions to be higher than what the data supports. Also, I should be transparent with my client about using the model for salary negotiations to see if they are comfortable with this.

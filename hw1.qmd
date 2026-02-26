@@ -1,0 +1,324 @@
+---
+title: "STAT 5610 HW1"
+author: "Jacob Krol"
+format: pdf
+editor: visual
+date: 2026-01-30
+---
+
+## Homework 1
+
+**Due: 11:59PM Friday, January 30 on Canvas**
+
+This is an individual homework. Individuals can talk about the homework with their teammates, but must submit their own work (no copying). Doing the math by hand and then scanning (or photographing) a **legible** pdf is acceptable. Using latex notation in Quarto is preferred.
+
+1.  You will learn some of the math underlying linear regression.
+2.  You will practice applying linear regression on a plausibly real problem.
+3.  Grad students must do both math problems. Undergrads can choose one. Some version of one of the math questions might be on the final exam. You may want to reference the other textbook *ESL* for these problems.
+4.  Submit your homework as a pdf. Show your code for the applied problem.
+
+### Math of Statistical Learning: Problem 1
+
+Suppose $\mathbf{y} = \mathbf{X \boldsymbol{\beta}} + \boldsymbol{\epsilon}$, where $\mathbf{y}$ and $\boldsymbol{\epsilon}$ are vectors of length $n$, where $\boldsymbol{\beta}$ is a vector of length $k$, and where $\mathbf{X}$ is $n \times (k+1)$ of rank $k+1<n$. Suppose that $\text{E}[\boldsymbol{\epsilon}] = \mathbf{0}$, the residuals have a constant $\sigma^2$ variance, each residual is uncorrelated with any other residual, and the residuals have a normal distribution. Now we can write $\mathbf{y} \sim \mathcal{N} _n(\mathbf{X} \boldsymbol{\beta}, \sigma^2 \mathbf{I})$ and equivalently, $\boldsymbol{\epsilon} \sim \mathcal{N} _n(\mathbf{0}, \sigma^2 \mathbf{I})$.
+
+a.  Suppose we conduct an $F$ test for $H_0:  \boldsymbol{\beta_1} = \mathbf{0}$ versus $H_1:  \boldsymbol{\beta_1} \neq \mathbf{0}$ where $\boldsymbol{\beta_1} = {( \beta_1, \beta_2,  \dots, \beta_k)}^{T}$. Write an expression for the $F$ statistic in terms of $\text{RSS}, \text{TSS}, \sigma^2, n, k$ and any integers needed. What is the distribution of the $F$ statistic when the null hypothesis is true?
+
+b.  Using the conditions in part (a), write an expression for the $F$ statistic that is equivalent to the $F$ statistic given in part (a); however use only $R^2, n, k$ and any integers needed.
+
+c.  Given a random sample of 20 observations from a population that meets the stated conditions, where $k = 2, \,\text{RSS} = 50,\, \mathbf{y}^T \mathbf{y} = 2800$, and the average observed response is 10, find the $F$ statistic and the $R^2$ statistic.
+
+d.  Find the appropriate p-value and state the conclusion of the $F$ test conducted in part (c) assuming the maximum acceptable probability of incorrectly rejecting the null is one percent, i.e., $\alpha = 0.01$.
+
+### Math of Statistical Learning: Problem 2
+
+Show that for multiple linear regression $R^2=\text{Cor}(Y,\hat{Y})^2$.
+
+### Applying Multiple Linear Regression
+
+Do Exercise 10 in ISLR2 on p 124.
+
+In addition to doing parts a through h, summarize your findings and conclusions by discussing which aspects of Q1 (the context of the problem, including things you may already know or have learned about car seats) helped you determine the best Q2 model. What is the usefulness of the best model (this is part of Q3)? Also discuss some aspect of the ethics of this problem.
+
+## Answers
+
+### Problem 1
+
+#### Problem 1a
+
+By definition, the F-statistic on page 76 of ISLR is 
+$$
+    F=\frac{(TSS-RSS)/p}{RSS/(n-p-1)}
+$$
+for this problem, $p=k$.
+
+Also, we have that the Residual Standard Error (RSE), estimate, is defined on page 66/76 of ISLR as
+$$
+    RSE=\sqrt{\frac{RSS}{n-k-1}} = \sigma
+$$
+
+If we square $\sigma$ and substitute it in for $RSS/(n-k-1)$ in the F-statistic, we get
+$$
+    F=\frac{(TSS-RSS)/k}{\sigma^2}
+$$
+
+If the null hypothesis is true, then the $F$ statistic follows an $F$ distribution with $k$ and $n-k-1$ degrees of freedom.
+
+#### Problem 1b
+
+By definition of $R^2$ on page 70 of ISLR, it is given that
+$$
+    R^2 = \frac{TSS-RSS}{TSS}
+$$
+
+Also, it's useful later to consider the complement of $R^2$:
+$$
+    1-R^2 = \frac{RSS}{TSS}
+$$
+
+$R^2$ can first be inserted by noticing that
+
+$$
+    TSS - RSS = R^2 \cdot TSS
+$$
+
+and we can substitute this into the F-stat
+
+$$
+    F=\frac{(TSS-RSS)/k}{RSS/(n-k-1)} = \frac{(R^2\cdot TSS)/k}{RSS/(n-k-1)}
+$$
+
+Next, the remaining $\frac{TSS}{RSS}$ is the reciprocal of $1-R^2$.
+
+$$
+    F=\frac{R^2/k}{(1-R^2)/(n-k-1)} = \frac{R^2(n-k-1)}{k(1-R^2)}
+$$
+
+#### Problem 1c
+
+From the problem statement, it was already given $n=20,k=2,RSS=50,y^ty=2800,\bar{y}=10$. 
+
+Therefore, to calculate the F-statistic and $R^2$, TSS needs to be found.
+
+$$
+TSS=\sum_i^n(y_i-\bar{y})
+$$
+
+By expanding the sum, TSS can be written in terms of $y^Ty$, $n$, and $\bar{y}$.
+
+$$
+TSS=\sum_i^n(y_i-\bar{y})^2 = \sum_i^n(y_i-\bar{y})(y_i-\bar{y}) \\
+= \sum_i^n(y_i^2-2y_i\bar{y} + \bar{y}^2) \\
+=\sum_{i}^{n}y_i^2 - 2\bar{y}\sum_{i}^{n}y_i + n\bar{y}^2
+$$
+
+Notice that $\sum_i^n y_i^2 = y^Ty$ and $\sum_i^n y_i = n\bar{y}$.
+
+$$
+\sum_{i}^{n}y_i^2 - 2\bar{y}\sum_{i}^{n}y_i + n\bar{y}^2 = y^Ty - 2n\bar{y}^2 + n\bar{y}^2 = y^Ty - n\bar{y}^2
+$$
+
+Plugging in $y^Ty=2800$, $n=20$, and $\bar{y}=10$, the $TSS$ is
+
+$$
+TSS = \sum_{i}^{n}y_i^2 - 2\bar{y}\sum_{i}^{n}y_i + n\bar{y}^2 = 2800-(20\cdot(10^2)) = 2800-2000 = 800 
+$$
+
+Using the definitions of $R^2$ and $F$ from Q1B, the given values and TSS can be plugged in to compute them.
+
+$$
+R^2 = \frac{TSS-RSS}{TSS} = \frac{800-50}{800} = \frac{750}{800} = 0.9375
+$$
+
+$$
+F=\frac{R^2(n-k-1)}{k(1-R^2)} = \frac{0.9375(20-2-1)}{2(1-0.9375)} = \frac{0.9375\cdot 17}{2\cdot 0.0625} = \frac{15.9375}{0.125} = 127.5
+$$
+
+Or,
+$$
+F=\frac{(TSS-RSS)/k}{RSS/(n-k-1)} = \frac{(800-50)/2}{50/(20-2-1)} = \frac{750/2}{50/17} = \frac{375}{50/17} = 375\cdot \frac{17}{50} = 127.5
+$$
+
+#### Problem 1d
+
+The p-value for the F-statistic is found by integrating the probability under the F-distribution for regions larger than the empirical F-stat calculated (127.5). A one-sided test is used because F is non-negative.
+
+```{r}
+df1 <- 2 # k
+df2 <- 20 - 2 - 1 # n - k - 1
+f <- 127.5
+# pf is cdf for F distribution
+p <- 1 - pf(f, df1, df2) # right-tail p-value
+p
+```
+
+The p-value (5.82 x 10^-11) is much smaller than $\alpha = 0.01$, so we reject the null hypothesis; the null hypothesis was that none of the predictors are significantly related to the response. Therefore, at least one predictor is significantly related to the response.
+
+### Problem 2
+
+The first important fact to show that $COR(Y,\hat{y})^2 = R^2$ is that the minimization of squared error implies residuals are in the null space of $X^T$; meanwhile,  predicted values are in the column space of $X$
+
+$$
+\text{min}_{\beta} ||y-X\beta||_2^2
+$$
+
+$$
+\frac{df}{d\beta}=-2X^T(y-X\beta)
+$$
+
+Because the minimization function is convex quadratic, the minimum value is when the derivative w.r.t $\beta$ is 0.
+
+$$
+X^T(y - X\beta) = 0
+$$
+
+Finally, notice that $y-X\beta$ is the residual vector ($e$), and that $X^Te=0$ implies that the residuals are orthogonal to the column space of $X$, which contains all of $\hat{y}$ (predicted values).
+
+Next, each $y_i$ in correlation can be written as the sum of its predicted value and its residual, and this allows simplification of correlation for least squares regression.
+
+Also, for least squares regression with an intercept, the mean of predicted response is equal to the mean of true response: $\bar{y} = \bar{\hat{y}}$.
+
+By definition of correlation,
+
+$$
+COR(Y,\hat{Y}) = \frac{\sum_i^n(y_i-\bar{y})(\hat{y_i}-\bar{y})}{\sqrt{\sum_i^n(y_i-\bar{y})^2}\sqrt{\sum_i^n(\hat{y_i}-\bar{y})^2}}
+$$
+
+Expanding $y_i$ as $\hat{y_i} + e_i$, the numerator becomes
+
+$$
+\sum_i^n(\hat{y_i} + e_i -\bar{y})(\hat{y_i}-\bar{y}) = \sum_i^n e_i(\hat{y_i}-\bar{y}) + \sum_i^n(\hat{y_i}-\bar{y})^2
+$$
+
+Because the residuals are orthogonal to the predicted values, the first term is 0, leaving only the squared deviations of predicted values in the numerator.
+
+$$
+\sum_i^n(\hat{y_i}-\bar{y})^2
+$$
+
+Using this numerator and squaring correlation gives
+
+$$
+COR(Y,\hat{Y})^2 = \frac{(\sum_i^n(\hat{y_i}-\bar{y})^2)^2}{\sum_i^n(y_i-\bar{y})^2 \cdot \sum_i^n(\hat{y_i}-\bar{y})^2} = \frac{\sum_i^n(\hat{y_i}-\bar{y})^2}{\sum_i^n(y_i-\bar{y})^2}
+$$
+
+The numerator is the explained sum of squares (ESS) which is the same as TSS - RSS, and the denominator is the total sum of squares (TSS). Therefore,
+$$
+COR(Y,\hat{Y})^2 = \frac{ESS}{TSS} = \frac{TSS - RSS}{TSS} = R^2
+$$
+
+### Problem 3
+
+
+```{r}
+library(ISLR2)
+# carseats data
+head(Carseats)
+```
+
+#### Problem 3a
+
+```{r}
+# fit mmultiple regression to predcit sales using Price, Urban, and US
+lm_obj <- lm(Sales ~ Price + Urban + US, data = Carseats)
+summary(lm_obj)
+```
+
+#### Problem 3b
+
+The summary output shows that the bias is about 13.043, Price coefficient is about -0.054,
+UrbanYes coefficient is about -0.022, and USYes is about 1.201. The interpretation of bias is when Price=UrbanYes=USYes=0 this implies sales are about 13.043 thousand units, on average.
+The UrbanYes coefficient of -0.022 implies that stores in urban location sell 22 units less than non-urban stores, given all other predictors are held constant.
+The USYes coefficient of 1.201 implies that stores in the US sell 1201 units more than non-US stores, given all other predictors are held constant.
+
+#### Problem 3c
+
+The regression equation is 
+
+$$
+\hat{Sales} = 13.043 - 0.054 \cdot Price - 0.022 \cdot UrbanYes + 1.201 \cdot USYes
+$$
+
+Where, UrbanYes is 1 for urban stores and 0 otherwise, and USYes is 1 for US stores and 0 otherwise.
+
+#### Problem 3d
+
+The null hypothesis that a predictor's coefficient is 0 can be rejected for Price and USYes because their p-values are extremely small (~2x10^-16 and 4.86x10^-6). The null hypothesis for UrbanYes cannot be rejected because its p-value is large (0.936).
+
+#### Problem 3e
+
+```{r}
+# fit only using Price and USYes
+lm_obj_filt <- lm(Sales ~ Price + US, data = Carseats)
+summary(lm_obj_filt)
+```
+
+#### Problem 3f
+
+```{r}
+summary(lm_obj)
+summary(lm_obj_filt)
+```
+
+The full model in part a has an R^2 of ~0.239 and a residual standard error (RSE) of ~2.472 while the filtered model in part e has an R^2 of ~0.239 and an RSE of ~2.469.
+
+It is known that R^2 only increases when predictors are added. However, RSE decreased slightly when removing UrbanYes, which indicates a better fit. This is possible because the RSE denominator is linear in n and k, so reducing k can reduce RSE.
+
+$$
+RSE = \sqrt{\frac{RSS}{n-k-1}}
+$$
+
+Since the model with fewer predictors has lower RSE and is less complex, I think it is better.
+
+#### Problem 3g
+
+```{r}
+# get 95% confidence intervals for coefficients from part e
+confint(lm_obj_filt, level = 0.95)
+```
+
+For the Price coefficient, the 95% confidence interval is roughly [-0.065,-0.044], and for the USYes coefficient, the 95% confidence interval is roughly [0.692,1.708]. 
+
+Meaning, under repeated sampling and model fitting, 95% of the confidence intervals computed would contain the true coefficient.
+
+#### Problem 3h
+
+Finding high leverage points by computing the leverage statistic.
+
+Plot leverage versus studentized residuals to identify high leverage points.
+
+```{r}
+studentized_residuals <- rstudent(lm_obj_filt) # gets studentized residuals
+leverage <- hatvalues(lm_obj_filt) # gets leverage values
+plot(leverage, studentized_residuals,
+     xlab = "Leverage",
+     ylab = "Studentized Residuals",
+     main = "Leverage vs Studentized Residuals")
+```
+
+```{r}
+# get the row for leverage point greater than 0.04
+high_leverage_points <- which(leverage > 0.04)
+Carseats[high_leverage_points, ]
+```
+
+From the leverage versus studentized residual plot, there was one point that had larger leverage than most other points (above 0.04). This point corresponds to row 43 in the Carseats dataset.
+
+
+#### Problem 3 QQQ
+
+##### Q1
+
+The problem context is that a car seat company wants to infer which aspects of their stores affect sales, and to what degree. The context is that we have some data about about sales and various store attributes such as price and location.
+
+##### Q2
+
+The dataset was provided by the ISLR textbook package in the format of a table where rows are stores and columns are attributes of the stores. Sales was regressed upon price and store location and an analysis of coefficients and p-values was done to determine which predictors were significant. The UrbanYes predictor was found to be insignificant and removed from the model. After removal, RSE improved slightly. Furthermore, confidence intervals for the smaller model's predictors were computed, and high leverage points were identified.
+
+
+###### Q3
+
+Altogether, the better regression model of car seat sales found was using only Price and USYes as predictors. Coefficients revealed that, when other store attributes are held constant, that price has a negative relationship with sales, while being in the US has a positive relationship with sales. If the carsear company wants to increase sales, the model suggests that reducing prices and focusing on US stores would be optimal. However, this assumes that the data here is representative of future sales, which may not be the case if market conditions change. 
+
+###### Ethical considerations
+
+The conclusion that US stores outperform non-US stores may lead to downsizing of non-US operations which could reduce carseat access to non-US locations. Furthermore, the non-US operation downsizing may encourage job firings.

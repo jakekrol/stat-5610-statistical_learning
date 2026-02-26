@@ -1,0 +1,17 @@
+---
+title: "Tae"
+author: Jake Krol
+date: "2026-02-16"
+---
+
+```{r}
+library(ISLR2)
+library(pls)
+set.seed(2)
+pcr.fit <- pcr(Salary ~ ., data = Hitters, scale = TRUE, validation = "CV")
+summary(pcr.fit)
+```
+
+```{r}
+validationplot(pcr.fit, val.type = "MSEP")
+```
