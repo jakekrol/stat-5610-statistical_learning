@@ -1,0 +1,330 @@
+---
+title: "Lab3 Team ROCStars"
+author: "Emery Berry, Ryan Morreale, Jacob Krol"
+format: pdf
+editor: visual
+date: 2026-03-27
+---
+
+## Lab3: Support Vector Machines
+
+**Due: 11:59PM Friday, March 27 on Canvas as a knitted pdf file of your team's Quarto document**
+
+1.  You will individually fit a support vector machine, describe what it is doing, and report its misclassification rate, sensitivity, and specificity.
+2.  You will interpret this model and make a prediction in your individual section.
+3.  As a team, you will create a support vector machine (SVM) and compete against other teams for the best test performance. You will also create a team plot that summarizes the performance of the individual SVMs and your team's SVM.
+
+### Instructions for Lab3
+
+In Lab0 (and Lab1), the professor created a generating model for Y variables taking on 0 or 1 values based on the X1 and X2 inputs. You came up with the backstory for what Y, X1, and X2 were and why it was important to use X1 and X2 to predict Y.
+
+In this lab, you will apply support vector machines to continue your analyses for how to best predict Y from X1 and X2. You should continue to use the Q1 qualitative context you developed in Lab0 or Lab1 (or you can develop a new one if you want).
+
+Each individual will fit at least one SVM on a training dataset and then evaluate how well the SVM classifies Y based on a test dataset. Individuals will make a prediction given (x1, x2) and then interpret their prediction and make a recommendation for action. Unlike in Lab0 and Lab1, you will not describe the whole workflow of Q1, Q2, and Q3 for this "project". You will report on the misclassification rate, sensitivity, and specificity for your SVM and make a prediction given (x1, x2). You will comment on how the prediction differs from your prediction in Lab1 and, given this new prediction, describe what actions (Q3) you recommend given your Q2 results.
+
+#### Generating Model
+
+We have a logistic regression generating model. Given $x_1 \in [0,1]$ and $x_2 \in [0,1], Y \sim Ber(p)$, where $p$ is related to $x_1$ and $x_2$ through the logistic link function: $\log(\frac{p}{(1-p)}) = x_1 -2x_2 -2{x_1}^{2} + {x_2}^{2} + 3{x_1}{x_2}$, where $\log$ is the natural log, sometimes written as $\ln$.
+
+The code for this is below.
+
+```{r}
+library(class)
+suppressPackageStartupMessages(library(tidyverse))
+```
+
+```{r}
+#Generative model
+set.seed(200) #setting a random seed so that we can
+#reproduce everything exactly if we want to
+
+generate_y <- function(x1,x2) { #two input parameters to generate the output y
+  logit <- x1 -2*x2 -2*x1^2 + x2^2 + 3*x1*x2 
+  p <- exp(logit)/(1+exp(logit)) #apply the inverse logit function
+  y <- rbinom(1,1,p) #y becomes a 0 (with prob 1-p) or a 1 with probability p
+}
+```
+
+#### Training dataset
+
+We are going to use our generating model to create a training dataset of 1000 predictors (x1, x2), and then 1000 outcomes. Then we plot all three variables to see what our training data looks like.
+
+```{r}
+# Generate a training dataset with 1000 points
+set.seed(321)
+n = 1000
+X1 <- runif(n,0,1)
+X2 <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 1000 y's
+Y <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y[i] <- generate_y(X1[i],X2[i])
+}
+
+sum(Y) #How many 0's and 1's were predicted? When n is very large
+# about 48% of the Y's should be 1's. 
+
+training <- cbind(X1,X2,Y) #combining all of my variables into a training dataset
+ggplot(data=training, aes(x=X1, y=X2, color=Y)) +
+  geom_point()
+```
+
+How well will various SVMs predict Y given new x1 and x2 values?
+
+#### Test datasets
+
+Each individual will generate a test set of 100 predictors (x1, x2) and outcomes (y) that we will use as our "ground truth". The test dataset should be the same for each team member. Use seed=323.
+
+
+#### What individuals need to do (20 pts)
+
+1.  Given the training set (seed=321), fit a ***different*** SVM for each team member. Choose from the options below:
+    1.  linear SVM (this will be a support vector classifier, i.e., a flat hyperplane \[actually just a line\])
+    2.  SVM with an interaction between X1 and X2
+    3.  SVM with degree 2 polynomials
+    4.  SVM with degree 3 polynomials
+2.  Use cross validation to choose your tuning parameters.
+3.  Describe what the SVM is doing, i.e., how it classifies points.
+4.  Calculate the sensitivity, specificity, and overall error rate (misclassification rate) for your SVM given the test set of 100 data points.
+5.  Make a prediction for a new point (x1, x2) = (0.25, 0.25) or (0.25, 0.75) or (0.75, 0.25) or (0.75, 0.75) for each fitted model. Each individual will have a different point for their predictions. Use the same one you used for Lab1
+6.  Comment on how the prediction differs from your prediction(s) in Lab1 and, given this new prediction, describe what actions (Q3) you recommend given your Q2 results.
+
+#### What teams need to do
+
+1.  Create a new team SVM that predicts the test set better than any individual SVM.
+
+2.  Describe what the SVM is doing, i.e., how it classifies points.
+
+3.  Make a plot that summarizes the performance of the individual SVMs and your team's SVM.
+
+4.  Provide R code that can easily be run in class to test the performance of your team's SVM (on a new test set). The code must accept a test dataset of 100 X and y values and output the misclassification rate, sensitivity, and specificity of the SVM. More specifically, write the code so that the only thing that needs to change is the random seed. Add some aspect of your team name to your code so we can distinguish between different teams' functions. Email your .qmd file to the professor. (Upload a pdf to Canvas.) The team with the best classifier on the test set the professor will generate in class (using a different seed) will get 10 bonus points. Second place will get 5 bonus points. Third place will get 4 bonus points. Fourth place will get 3 bonus points. Fifth place will get 2 bonus points. Sixth place will get 1 bonus point. Only teams whose code runs (in class) on the first try will get any bonus points.
+
+5.  In the team section of this lab, write a paragraph about individual contributions. Each individual must comment on their contributions to the lab. Only individuals who contribute to the team section will get points for the team section.
+
+#### **Some intended outcomes from this assignment:**
+
+-   You will individually get practice fitting a SVM
+-   You will compare the predictive performance of multiple SVMs and previously used classification methods
+-   You will make predictions based on your SVM
+-   You will compare models visually
+-   You will gain experience collaborating with your teammates on an applied problem
+
+## Test dataset generation
+
+```{r}
+# Create the training dataset as above using seed=321
+# Create a testing dataset using seed=323
+
+set.seed(323)
+n = 100
+X1_test <- runif(n,0,1)
+X2_test <- runif(n,0,1)
+
+Y_test <- rep(0,n)
+for (i in 1:n) {
+  Y_test[i] <- generate_y(X1_test[i],X2_test[i])
+}
+test <- cbind(X1_test,X2_test,Y_test)
+cat("# of 1s", sum(Y_test), "\n")
+cat("# of 0s", sum(1-Y_test), "\n")
+ggplot(data=test, aes(x=X1_test, y=X2_test, color=Y_test)) +
+  geom_point() +
+  ggtitle("Test data")
+```
+
+## Individual sections
+
+### Jake
+
+#### Outline
+
+- I will fit an SVM with degree 3 polynomial.
+- I will use 3-fold cross validation to search for the cost and gamma parameters.
+  - 3-fold is faster than 10-fold, but may overestimate test error. 
+
+Dependencies
+```{r}
+library(e1071)
+```
+
+#### Degree 3 SVM model selection
+
+```{r}
+# Generate a training dataset with 1000 points
+set.seed(321)
+n = 1000
+X1_train <- runif(n,0,1)
+X2_train <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 1000 y's
+Y_train <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y_train[i] <- generate_y(X1_train[i],X2_train[i])
+}
+
+sum(Y)
+
+training <- cbind(X1_train,X2_train,Y_train)
+ggplot(data=training, aes(x=X1_train, y=X2_train, color=Y_train)) +
+  geom_point()
+```
+
+```{r}
+# fit the SVM with degree 3 polynomial
+# note this implementation of svm
+# means that small cost -> wide margin, large cost -> narrow margin
+costs <- c(0.1,1)
+# large gamma -> high similarities rewarded, small gamma -> less reward for similarities
+gammas <- 10^(-1:1)
+training <- data.frame(X1=X1_train, X2=X2_train, Y=as.factor(Y_train))
+tune.out <- tune(svm, Y ~ ., data=training, kernel="polynomial", degree=3,
+  ranges=list(cost=costs, gamma=gammas), tune.control=tune.control(cross=3))
+
+```
+
+```{r}
+summary(tune.out)
+```
+
+The best performance of 0.465 error rate was acheived with gamma=0.1 and cost $\in$ {0.1, 1}
+
+Since lower cost means wider margin in this SVM implementation, I will choose the lowest cost of 0.1 to avoid overfitting.
+
+Final model is SVM with degree 3 polynomial, gamma=0.1, and cost=0.1.
+
+```{r}
+svm_deg3_final <- svm(Y ~ ., data=training, kernel="polynomial", degree=3, gamma=0.1, cost=0.1)
+```
+
+#### Description of SVM classification
+
+The degree 3 polynomial SVM chooses a class by computing the decision function
+
+$$
+f(x) = \sum_{i\in S} \alpha_i y_i (\gamma x_i^Tx)^3 + \beta_0
+$$
+
+- $S$ is the set of support vectors
+- $\alpha_i$ is a learned weight for a specific support vector
+- $y_i$ is the training label for the $i$th point
+- $\gamma$ is a hyperparameter scaling the impact of similarity between a support vector and the input
+- $\beta_0$ is the bias
+
+A final prediction is done by computing f(x) and taking the sign.
+
+#### Test evaluation
+
+```{r}
+pred_deg3 <- predict(svm_deg3_final, newdata=data.frame(X1=X1_test, X2=X2_test))
+sensitivity_deg3 <- sum(pred_deg3 == 1 & Y_test == 1) / sum(Y_test == 1)
+specificity_deg3 <- sum(pred_deg3 == 0 & Y_test == 0) / sum(Y_test == 0)
+misclassification_rate_deg3 <- mean(pred_deg3 != Y_test)
+cat("Sensitivity:", sensitivity_deg3, "\n")
+cat("Specificity:", specificity_deg3, "\n")
+cat("Misclassification Rate:", misclassification_rate_deg3, "\n")
+```
+
+The model predicted all test points for the negative class yeilding a sensitivity of 0, specificity of 1, and misclassification rate of 0.49. This is no better than a simple majority classifier.
+
+#### Prediction of new point
+
+
+```{r}
+new_point <- data.frame(X1=0.75, X2=0.25)
+pred_new_point_deg3 <- predict(svm_deg3_final, newdata=new_point)
+cat("Prediction for new point (0.75, 0.25):", pred_new_point_deg3, "\n")
+```
+
+Degree 3 polynomial SVM predicts a class of 1 for the point (0.75, 0.25).
+
+#### Compare with Lab1 predictions and recommendation
+
+The problem context of lab 1 was the problem of whether or not to diagnose a patient given the doctor's belief (e.g., X1) and a test result (e.g., X2). 
+
+In lab 1, I made a prediction for the point (0.75, 0.25) using logistic regression, LDA, QDA, naive bayes, and logistic regression, and all models, except QDA, predicted a class of 1 for this point. Here, the degree 3 polynomial SVM also predicts a class of 1 for the point (0.75, 0.25).
+
+Similar to lab 1, I would not recommend using this model for disease diagnosis. The misclassification error on the test dataset was no better than a majority classifier where all model predictions were for the negative class (Q3)
+
+## Team section
+
+### Model selection
+
+We tuned a radial kernel SVM on the training set to select cost and gamma parameters.
+
+```{r}
+# fit the SVM with radial kernel
+cat("Tuning radial svm")
+costs <- c(0.1,1)
+gammas <- 10^(-1:1)
+training <- data.frame(X1=X1_train, X2=X2_train, Y=as.factor(Y_train))
+tune.out_radial <- tune(svm, Y ~ ., data=training, kernel="radial",
+  ranges=list(cost=costs, gamma=gammas), tune.control=tune.control(cross=3)
+)
+summary(tune.out_radial)
+```
+
+```{r}
+cat("Best parameters for radial SVM:", tune.out_radial$best.parameters$cost, ",", tune.out_radial$best.parameters$gamma, "\n")
+cat("Best performance for radial SVM:", tune.out_radial$best.performance, "\n")
+```
+
+The best cost and gamma parameters were 1 and 0.1, respectively acheiving a misclassification rate of 0.416 under 3-fold cross validation.
+
+### Description of SVM classification
+
+The radial SVM chooses a class by computing the decision function
+
+$$
+f(x) = \sum_{i\in S} \alpha_i y_i \exp(-\gamma ||x_i - x||^2) + \beta_0
+$$
+
+- $S$ is the set of support vectors
+- $\alpha_i$ is a learned weight for a specific support vector
+- $y_i$ is the training label for the $i$th point
+- $\gamma$ is a hyperparameter scaling the impact of similarity between a support vector and the input
+- $\beta_0$ is the bias
+
+A final prediction is done by computing f(x) and taking the sign.
+
+### Test evaluation
+
+```{r}
+svm_radial_final <- svm(Y ~ ., data=training, kernel="radial", gamma=0.1, cost=1)
+pred_radial <- predict(svm_radial_final, newdata=data.frame(X1=X1_test, X2=X2_test))
+sensitivity_rad <- sum(pred_radial == 1 & Y_test == 1) / sum(Y_test == 1)
+specificity_rad <- sum(pred_radial == 0 & Y_test == 0) / sum(Y_test == 0)
+misclassification_rate_rad <- mean(pred_radial != Y_test)
+cat("Sensitivity:", sensitivity_rad, "\n")
+cat("Specificity:", specificity_rad, "\n")
+cat("Misclassification Rate:", misclassification_rate_rad, "\n")
+```
+
+The radial SVM acheived approximately sensitivity of 0.347, specificity of 0.706, and misclassification of 0.47 on the test set, which is better than any of the individual SVMs.
+
+### Individual contributions
+
+#### Emery
+
+- Suggested using radial SVM for team model
+- Contributed to description of SVM classification
+- Reviewed and edited final lab report
+
+#### Ryan
+
+- Suggested using radial SVM for team model
+- Contributed to description of SVM classification
+- Reviewed and edited final lab report
+
+#### Jake
+
+- Tuned radial SVM and evaluated on test dataset
+- Wrote final description of SVM classification
+- Wrote final R script for team SVM
+- Plotted final team SVM performance compared to individual SVMs
+
+
+
+
+
+

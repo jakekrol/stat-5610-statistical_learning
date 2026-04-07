@@ -1,0 +1,106 @@
+---
+title: "Lab3 competition ROCstars"
+author: "Emery Berry, Ryan Morreale, Jacob Krol"
+format: pdf
+editor: visual
+date: 2026-03-27
+---
+
+## Instructions
+
+- define prof.test
+- run all
+
+```{r}
+# column 1 is X1, column 2 is X2, column 3 is Y
+prof.test <- NULL
+```
+
+## Libraries
+```{r}
+library(e1071)
+library(ggplot2)
+```
+
+## Train generation
+```{r}
+generate_y <- function(x1,x2) { #two input parameters to generate the output y
+  logit <- x1 -2*x2 -2*x1^2 + x2^2 + 3*x1*x2 
+  p <- exp(logit)/(1+exp(logit)) #apply the inverse logit function
+  y <- rbinom(1,1,p) #y becomes a 0 (with prob 1-p) or a 1 with probability p
+}
+# Generate a training dataset with 1000 points
+set.seed(321)
+n = 1000
+X1_train <- runif(n,0,1)
+X2_train <- runif(n,0,1)
+
+#I'm going to use a for loop to generate 1000 y's
+Y_train <- rep(0,n) #initializing my Y to be a vector of 0's
+for (i in 1:n) {
+  Y_train[i] <- generate_y(X1_train[i],X2_train[i])
+}
+
+sum(Y_train)
+
+training <- data.frame(X1=X1_train, X2=X2_train, Y=as.factor(Y_train))
+ggplot(data=training, aes(x=X1, y=X2, color=Y)) +
+  geom_point()
+```
+
+## Fit team SVM
+
+```{r}
+svm_radial <- svm(Y ~ ., data=training, kernel="radial", gamma=0.1, cost=1)
+summary(svm_radial)
+```
+
+## Test evaluation
+
+Generate test if not provided (for testing purposes)
+```{r}
+
+if (is.null(prof.test)) {
+  SEED <- 323
+
+  set.seed(SEED)
+
+  n = 100
+  X1_test <- runif(n,0,1)
+  X2_test <- runif(n,0,1)
+
+  Y_test <- rep(0,n)
+  for (i in 1:n) {
+    Y_test[i] <- generate_y(X1_test[i],X2_test[i])
+  }
+
+  prof.test <- data.frame(X1=X1_test, X2=X2_test, Y=as.factor(Y_test))
+
+  cat("# of 1s", sum(Y_test), "\n")
+  cat("# of 0s", sum(1-Y_test), "\n")
+  ggplot(data=prof.test, aes(x=X1, y=X2, color=Y)) +
+    geom_point() +
+    ggtitle("Test data")
+} else {
+  cat("Using provided test data\n")
+  prof.test
+}
+
+
+```
+
+
+Evaluate team SVM
+
+```{r}
+# set the column names to match the training data
+pred <- predict(svm_radial, newdata=data.frame(X1=prof.test[,1], X2=prof.test[,2], Y=prof.test[,3]))
+pred_numeric <- as.numeric(as.character(pred))
+Y_test_numeric <- as.numeric(as.character(prof.test[,3]))
+sens <- sum(pred_numeric == 1 & Y_test_numeric == 1) / sum(Y_test_numeric == 1)
+spec <- sum(pred_numeric == 0 & Y_test_numeric == 0) / sum(Y_test_numeric == 0)
+misclass_error <- mean(pred_numeric != Y_test_numeric)
+cat("Sensitivity:", sens, "\n")
+cat("Specificity:", spec, "\n")
+cat("Misclassification error:", misclass_error, "\n")
+```

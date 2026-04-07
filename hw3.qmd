@@ -1,0 +1,664 @@
+---
+title: "HW3"
+author: "Jacob Krol"
+execute:
+  echo: true
+  eval: true
+format: pdf
+editor: visual
+date: 2026-03-13
+---
+
+## Homework 3
+
+**Due: 11:59PM Friday, March 13 on Canvas**
+
+This is an individual homework. Individuals can talk about the homework with their teammates, but must submit their own work (no copying). Doing the math by hand and then scanning (or photographing) a **legible** pdf is acceptable. Using latex notation in Quarto is preferred. Each person on a team will choose a data set different from other team members for their Part 2 applied problem. The data set must have at least 12 predictors. The Y response variable can be continuous or categorical. Individuals may use the data set they used in HW2 again if it has enough X predictors, or they can pick a new data set. If you use the same data set, you must add a brief statement about how the tree-based methods compare with the methods of HW2. You may also change your research question (Q1) for this homework, or keep it the same (a new data set will require a new research question).
+
+1.  You will learn some of the math underlying bootstrapping and tree-based methods.
+2.  You will practice applying tree-based methods on a plausibly real problem.
+3.  Grad students must do both math problems. Undergrads can choose one. Some version of the math questions might be on the final exam. You may want to reference the other textbook *ESL* for these problems.
+4.  Submit your homework as a pdf. Show your code for the applied problem.
+
+### Math of Bootstrapping and How it Relates to Tree-based Methods
+
+#### Problem 1
+
+Suppose we have iid samples $x_1,\ldots,x_n$ from a probability distribution with mean $\mu$ and variance $\sigma^2$.
+
+a.  Find the probability (as a function of $n$) that $x^{*1}$, the first bootstrap sample, is *not* $x_1$. Justify your answer.
+b.  Find the probability that $x^{*1}$ and $x^{*2}$ (the second bootstrap sample) do *not* include $x_1$.
+c.  What is the probability that a complete bootstrap sample of size $n$ will *not* include $x_1$?
+d.  Conclude that the probability that $x_1$ *is* in the bootstrapped data set converges to $1-e^{-1}$ as $n\to\infty$.
+e.  Explain what `mean(store)` is in the following R code. Did the value of `mean(store)` conform to your expectation?
+
+```{r, eval=FALSE}
+n=100
+store <- rep(NA, 200)
+for (i in 1:200) {
+store[i] <- sum(sample(1:n, replace=TRUE) == 7) > 0
+}
+mean(store)
+```
+
+f.  Using the code above, create a plot that shows the probability that $x_1$ *is* in the bootstrapped data set for $n$ ranging from $n=1$ to $n=1000$ (perform one simulation per value of $n$). On the same plot, show the theoretical probability that $x_1$ *is* in the bootstrapped data set.
+g.  Find the variance of the average of $x_1,\ldots,x_n$.
+h.  Now suppose the $n$ random variables are not independent and that $\text{Cor}{(x_i,x_j)}=\rho,$ with $\rho>0$. Find the variance of the average of the $n$ random variables.
+
+#### Problem 2
+
+Suppose $x_i,\, i = 1,\, \dots, N$ are independent and identically distributed random variables from a population with mean $\mu$ and variance $\sigma^2$. Let $\overline{x}_1^*$ and $\overline{x}_2^*$ be two bootstrap realizations of the sample mean.
+
+a.  Derive $\text{Var}(\overline{x}_1^*)$ and $\text{Var}(\overline{x}_2^*)$.
+b.  Simulate the sampling correlation $\text{Cor} (\overline{x}_1^*,\overline{x}_2^*)= \frac{n}{2n-1} \approx 50 \%$ between two bootstrap means. Plot the correlation as a function of $B$ from 1 to 1000. You can adapt the code below.
+
+```{r, eval=FALSE}
+set.seed(307)
+x1means <- rep(0,1000)
+x2means <- rep(0,length(x1means))
+
+n=20
+for (i in 1:length(x1means)) {
+  dat <- rnorm(n)
+  x1means[i] <- mean(sample(dat,replace=T))
+  x2means[i] <- mean(sample(dat,replace=T))
+}
+cor(x1means,x2means)
+```
+
+c.  Show that the sampling correlation, $\text{Cor} (\overline{x}_1^*,\overline{x}_2^*)= \frac{n}{2n-1} \approx 50 \%$.
+d.  Derive the variance of the bagged mean $\overline{x}_{\text{bag}}$, where $\overline{x}_{\text{bag}}= \sum_{b=1}^B\overline{x}_b^*$. Show that bagging produces no reduction in variance for estimating the sample mean.
+
+### Applying Tree-Based Methods
+
+In this applied problem, you will do a "complete" analysis, starting with Q1 (what are the data?, what is the research question?), then fitting several models (Q2) using cross validation to determine optimal tuning parameters, and finally **selecting the best model using a validation set** (that your models haven't used in training), using the models to answer your research question, and reflecting on the ethics of the problem (Q3).
+
+A complete analysis has many components. Your analysis should address the points below.
+
+1.  Find a data set that has many **X** predictors (at least 12). The Y response can be continuous or categorical. Briefly describe what the data set is. What is Y? What is **X**? Suggestion: Use a data set built into R, either one already used as an example in ISLR2, or any other data set you can find that you find interesting. You may reuse the data set you used in HW2 or you can "trade" data sets with a teammate. You should create a training subset of the data and a validation test subset of the data such that you only use the validation data to compare between models, whereas the models are tuned using CV on the training set.
+
+2.  Q1: Determine your research question, which is very likely to be something like, “Given a training set (and using CV to determine tuning parameters), I want to predict Y from a validation test data set. I also want to know which predictor variables from **X** best predict Y.” Or your research question could be something else. Note that your research question must be answerable using tree-based methods.
+
+3.  Q1: How might the answer to your research question be used? Why do you care? Why is this important? What benefit will knowing the answer have? (If you are using your data set from HW2, you can reuse much of this descriptive material if it's still appropriate.)
+
+4.  Argue why tree-based methods are appropriate for the context of your data set and your research question (Q1).
+
+5.  For Q2, you will use cross validation (either k-fold or LOOCV) to find the best tree-based models from this list:
+
+<!-- -->
+
+a.  Classification or regression tree (i.e., a regular decision tree)
+b.  Bagging
+c.  Random forests
+d.  Boosting
+e.  BART
+
+Q2 continued: For the regular classification or decision tree you fit, use CV to determine the optimal leaf size among a range of reasonable sizes (e.g., 1-10 might be a range of reasonable minimum terminal node sizes). Comment on how the CV approximate test error varies with the minimum leaf size.
+
+Use CV or out-of-bag (OOB) error to tune the parameters for bagging, random forests, and boosting (for BART, just use some reasonable defaults). For the random forests model in particular, use out-of-bag (OOB) error to determine the optimal size m (i.e., mtry) of the number of predictors considered at each split as well as the optimal leaf minimum size. Below is some sample code for random forests:
+
+```{r}
+library(randomForest)
+library(ggplot2)
+
+# Sample Data (replace with your data and remember to separate your data
+# into a training set and a validation set)
+data(iris)
+
+# Tuning nodesize and mtry using OOB error
+oob.errors <- matrix(NA, nrow = 10, ncol = 3) # Matrix to store OOB errors
+nodesize.values <- 1:10
+mtry.values <- 1:3 # Assuming you have 3 predictors, but you should have many more than that
+
+for (i in nodesize.values) {
+  for (j in mtry.values) {
+    rf.tuned <- randomForest(Species ~ ., data = iris, nodesize = i, mtry = j)
+   oob.errors[i, j] <- rf.tuned$err.rate[nrow(rf.tuned$err.rate), "OOB"]
+      }
+    }
+
+# Create a data frame for ggplot
+plot.data <- expand.grid(nodesize = nodesize.values, mtry = mtry.values)
+plot.data$OOB_Error <- as.vector(oob.errors)
+
+# Plot using ggplot2 (faceted by mtry)
+ggplot(plot.data, aes(x = nodesize, y = OOB_Error)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ mtry, labeller = label_both) + # Facet by mtry
+  labs(title = "OOB Error vs. nodesize and mtry",
+           x = "nodesize",
+           y = "OOB Error") +
+  theme_minimal()
+```
+
+6.  How does the validation test MSE or misclassification rate of the models compare? You should use a part of the data set that the models haven't seen yet.
+
+7.  Q3: What is the answer to your research question? How (if at all) does your answer vary by your choice of statistical model? How does "variable importance" factor into your answer(s) to your research question? How might this answer be used? What conclusions or recommendations do you have based on your statistical analysis? Which model did you choose? Why? What about Q1 and Q3 made you choose that model?
+
+8.  Reflecting on model choice: If you had to choose just one model, which model would you choose? How does your choice relate to the Q1 context, the Q2 quantitative findings from your models, or the intended uses of and actions based on your model (Q3)? In other words, did you choose your model primarily because it was the best to answer your research question (Q1) or because it had the best evaluation test set performance (Q2) or because it is more interpretable than the other models and therefore better for your intended uses (Q3)?
+
+9.  Q3: Comment on some aspects of the ethics of this problem, using the ethical principles covered in the readings and in-class at the beginning of the semester.
+
+### Answers
+
+#### Bootstrapping math
+
+##### Problem 1
+
+###### Problem 1a
+
+Bootstrapping is uniformly random with replacement.
+
+For $n$ samples, $Pr[x^{*1} \text{ is } x_1]=1/n$
+
+The complementary event has $Pr[\lnot (x^{*1} \text{ is } x_1) ]= 1-\frac{1}{n} = \frac{n}{n}-\frac{1}{n} = \frac{n-1}{n}$
+
+###### Problem 1b
+
+Replacement implies the probability of the $i$th sample being the first sample is the same regardless of $i$. In other words, each bootstrapped sampling probability is independent. Therefore, joint events can be multiplied.
+
+In general, $Pr[x^{*i} \text{ is } x_1]=1/n$. And complementarily, $Pr[\lnot (x^{*i} \text{ is } x_1) ]=\frac{n-1}{n}$.
+
+Therefore, $Pr[\lnot (x^{*1} \text{ is } x_1) \text{ AND } \lnot(x^{*2} \text{ is } x_1) ]= (\frac{n-1}{n})^2$
+
+###### Problem 1c
+
+Generalizing the result in part 1b to n bootstrapped samples, the probability that all n do not contain the first sample is $(\frac{n-1}{n})^n$
+
+###### Problem 1d
+
+To conclude that the probability $x_1$ is in bootstrapped data converges to $1-(1/e)$ as $n \to \infty$, 
+a well known limit expression can be used.
+
+$$
+\lim_{n\to \infty} (1+\frac{x}{n})^n=e^x
+$$
+
+Rewriting $(\frac{n-1}{n})^n = (1-\frac{1}{n})^n$, $x$ can be substituted with $-1$.
+
+$$
+\lim_{n\to \infty} (1-\frac{1}{n})^n=e^{-1}
+$$
+
+Since the probability that $x_1$ is NOT in the bootstrap data is $e^-1$, the complementary case where $x_1$ is in the bootstrap data is $1-e^-1 \approx 0.63$
+
+###### Problem 1e
+
+I added comments to the R code explaining what each line does.
+
+In summary, the values 1, ..., 100 are boostrapped 200 times into a sample dataset, then the average number of times a specific value (7) occurs in the bootstrap data is computed.
+
+```{r}
+n=100 # num data points
+store <- rep(NA, 200) # initialize 200 len NA vec
+for (i in 1:200) {
+# sample values from 1...100 with replacement (sampled data is also len 100)
+# test if a specific value (7) is included in the sampled data
+# repeat 200 times
+store[i] <- sum(sample(1:n, replace=TRUE)==7) >0 
+}
+# compute the avg number of times 7 occurred in the bootstrap data
+mean(store)
+```
+
+Yes, the "mean(store)=0.63" matches the result in part 1d. Where, the probability of a sample being included in the bootstrap converges to 0.63 for large n.
+
+###### Problem 1f
+
+```{r}
+library(ggplot2)
+n <- seq(1, 1000)
+probs <- c()
+for (n_i in n) {
+  store <- rep(NA,200)
+  for (i in 1:200) {
+    store[i] <- sum(sample(1:n_i, replace=TRUE)==7) >0
+  }
+  prob <- mean(store)
+  probs <- c(probs, prob)
+}
+# plot n v prob ggplot
+df_plot <- data.frame(n=n, prob=probs)
+ ggplot(df_plot, aes(x=n, y=prob)) +
+  geom_line() +
+  geom_hline(yintercept=1-exp(-1), linetype="dashed", color="red") +
+  labs(title="Probability x1 in Bootstrap Data versus data size (n)",
+       x="n",
+       y="Probability") +
+  theme_minimal()
+```
+
+###### Problem 1g
+The average of $x_1, \ldots, x_n$ is $\frac{1}{n}\sum_{i=1}^n x_i$.
+
+It is given that $x_1, \ldots, x_n$ are indepdendent and identically distributed, and independence implies covariance between $x_i,x_j$ is 0.
+
+Therefore, the variance of the average is 
+
+$$
+\begin{aligned}
+  VAR[\frac{1}{n}\sum_{i=1}^n x_i] = \frac{1}{n^2}VAR[\sum_{i=1}^n x_i] = \\
+  \frac{1}{n^2}\sum_{i=1}^n VAR[x_i]
+\end{aligned}
+$$
+
+Substituting $VAR[x_i]=\sigma^2$
+
+$$
+\frac{1}{n^2}\sum_{i=1}^n VAR[x_i] = \frac{1}{n^2} \cdot \sigma^2n = \sigma^2/n
+$$
+
+###### Problem 1h
+
+If $Cor(x_i,x_j) = \rho > 0$. Then, we have to include the covariance terms.
+
+In general, $VAR[\sum_{i=1}^n \alpha x_i] = \alpha^2 \sum_{i=1}^nVAR[x_i] + 2\alpha^2\sum_{i>j} COV[x_i,x_j]$.
+
+Here, we are given $Cor(x_i,x_j) = \rho > 0$. Therefore, we can substitute each covariance term with $\rho\cdot \sigma^2$. And, $\alpha$ is $1/n$.
+
+$$
+\alpha^2 \sum_{i=1}^nVAR[x_i] + 2\alpha^2\sum_{i>j} COV[x_i,x_j] = \frac{\sigma^2}{n} + \frac{2}{n^2} \cdot \binom{n}{2} \cdot \rho \sigma^2
+$$
+
+
+##### Problem 2
+
+###### Problem 2a
+
+
+The variance of the $i$th bootstrap sample mean is 
+$$
+VAR[\bar{x}^*_i] = VAR\left[\frac{1}{n}\sum_{i=1}^nx_i^*\right]
+$$
+
+Given independence of each $x_i^*$ under sampling with replacement, the covariance terms are 0 and the variance operator can be applied linearly.
+$$
+VAR\left[\frac{1}{n}\sum_{i=1}^nx_i^*\right] =\frac{1}{n^2}\sum_{i=1}^nVAR[x_i^*] = \frac{nS}{n^2} = \frac{S}{n}
+$$
+
+where $S = \frac{1}{n}\sum_{i=1}^n(x_i - \bar{x})^2$ is the variance of the bootstrap distribution.
+
+###### Problem 2b
+
+```{r}
+set.seed(307)
+x1means <- rep(0,1000)
+x2means <- rep(0,length(x1means))
+
+n=20
+for (i in 1:length(x1means)) {
+  dat <- rnorm(n)
+  x1means[i] <- mean(sample(dat,replace=T))
+  x2means[i] <- mean(sample(dat,replace=T))
+}
+cor(x1means,x2means)
+
+cors <- rep(0,1000)
+for (i in 1:1000) {
+  cors[i] <- cor(x1means[1:i], x2means[1:i])
+}
+df_plot <- data.frame(B=1:1000, Correlation=cors)
+ggplot(df_plot, aes(x=B, y=Correlation)) +
+  geom_line() +
+  labs(title="Correlation between two bootstrap means vs. number of bootstrap samples (B)",
+       x="Number of Bootstrap Samples (B)",
+       y="Correlation") +
+  theme_minimal()
+```
+
+###### Problem 2c
+
+Given the bootstrap data, $VAR^[\bar{x}^*_i] = \frac{S}{n}$ (problem 2a).
+
+Apply the law of total covariance with the full data set $x_1, \ldots, x_n$ as the condition.
+
+$$
+COV(\bar{x}^*_1, \bar{x}^*_2) = E\left[COV(\bar{x}^*_1, \bar{x}^*_2 \mid x_1, \ldots, x_n)\right] + COV\left(E^*[\bar{x}^*_1 \mid x_1, \ldots, x_n],\ E^*[\bar{x}^*_2 \mid x_1, \ldots, x_n]\right)
+$$
+
+The first term is 0 by conditional independence. Since $E^*[\bar{x}^*_i \mid x_1, \ldots, x_n] = \bar{x}$, self covariance can be applied to the second term.
+
+$$
+COV(\bar{x}^*_1, \bar{x}^*_2) = VAR(\bar{x}) = \frac{\sigma^2}{n}
+$$
+
+Using the law of total variance, $VAR(\bar{x}^*) = E\left[\frac{S}{n}\right] + VAR(\bar{x}) = \frac{(n-1)\sigma^2}{n^2} + \frac{\sigma^2}{n} = \frac{(2n-1)\sigma^2}{n^2}$. 
+
+Substituting the covariance and variance results into the correlation formula gives
+
+$$
+Cor(\bar{x}^*_1, \bar{x}^*_2) = \frac{\sigma^2/n}{(2n-1)\sigma^2/n^2} = \frac{n}{2n-1}
+$$
+
+###### Problem 2d
+
+I assume the bagged mean was missing a normalization factor of $1/B$.
+
+Therefore, the variance of the bagged mean is
+
+$$
+VAR[\bar{x}_{bag}] = VAR[\frac{1}{B}\sum_{b=1}^B \bar{x}^*_b] = \frac{1}{B^2} VAR\left[\sum_{b=1}^B \bar{x}^*_b\right]
+$$
+
+The variance of the sum can be expanded using the fact that all $2\binom{B}{2}=B(B-1)$ pairs have covariance $\frac{\sigma^2}{n}$ and all variances are $\frac{(2n-1)\sigma^2}{n^2}$.
+$$
+\frac{1}{B^2}\left[B \cdot \frac{(2n-1)\sigma^2}{n^2} + B(B-1)\cdot \frac{\sigma^2}{n}\right] = \frac{(2n-1)\sigma^2}{Bn^2} + \frac{(B-1)\sigma^2}{Bn}
+$$
+For large $B$ approaching $\infty$ the first term vanishes to 0 and the second term converges to $\frac{\sigma^2}{n}$.
+$$
+VAR[\bar{x}_{bag}] \to \frac{\sigma^2}{n}
+$$
+Therefore, bagging does not reduce variance $VAR[\bar{x}_{bag}]= VAR[\bar{x}]$.
+
+
+#### Application problem answers
+
+##### Application problem 1
+
+The hitters data set from the ISLR2 package describes has 19 statistics for 322 baseball players (samples), and their salary. Statistics (X) were used as predictors of salary (Y). Notably, the player statistics and salaries are from 1986 and 1987.
+
+##### Application problem 2
+
+For Q1, I assumed the context of a sports agent seeking to estimate salaries (outcome) of clients (baseball players) using their statistics (e.g., number of runs scored in 1986) as predictors. Tree methods are applicable for fitting a model that regresses salary on player statistics.
+
+##### Application problem 3
+
+The goal of estimating salaries is to enter contract negotations with a reasonable proposed starting salary, which is the model's estimate for a player's salary given their statistics. Given this data is from 1986 and 1987, the salary should be adjusted to modern ranges. Furthermore, I want to know which statistics are most important for salary changes to inform my client on how their salary might be affected by these statistics.
+
+##### Application problem 4
+
+A tree-based approach is appropriate because the problem of estimating salary can be framed as regreesion tree supervised learning, and furthermore, factor variables such as the "League" of a player are naturally handled efficiently and simply by trees; in contrast to regression, where extra variables need to be added to support categoricals.
+
+##### Application problem 5
+
+Setup 
+
+```{r}
+library(tidyverse)
+library(ISLR2)
+library(tree)
+set.seed(0)
+hitters <- Hitters |> drop_na()
+train_size <- as.integer(0.8 * nrow(hitters))
+train_idx <- sample(1:nrow(hitters), size = train_size, replace = FALSE)
+test_idx <- setdiff(1:nrow(hitters), train_idx)
+train_data <- hitters[train_idx,]
+test_data <- hitters[test_idx,]
+cat("train size: ", length(train_idx), " test size: ", length(test_idx), "\n")
+```
+
+###### 5a regression tree
+
+```{r}
+library(tree)
+set.seed(0)
+k <- 5
+folds <- sample(rep(1:k, length.out = nrow(train_data)))
+# min number of observations in terminal nodes (hyperparameter)
+leaf_sizes <- 1:10
+cv_errors <- rep(0, length(leaf_sizes))
+
+for (i in 1:length(leaf_sizes)) {
+  for (fold in 1:k) {
+    cv_train <- train_data[folds != fold, ]
+    cv_valid <- train_data[folds == fold, ]
+    tree_fit <- tree(Salary ~ ., data = cv_train,
+                     control = tree.control(nobs = nrow(cv_train),
+                                           minsize = leaf_sizes[i]))
+    pred <- predict(tree_fit, newdata = cv_valid)
+    cv_errors[i] <- cv_errors[i] + mean((cv_valid$Salary - pred)^2)
+  }
+  cv_errors[i] <- cv_errors[i] / k
+}
+
+best_idx <- which.min(cv_errors)
+best_leaf_size <- leaf_sizes[best_idx]
+cat("Best leaf size:", best_leaf_size, "\n")
+cat("CV MSE at best leaf size:", cv_errors[best_idx], "\n")
+
+df_plot <- data.frame(leaf_size = leaf_sizes, cv_error = cv_errors)
+ggplot(df_plot, aes(x = leaf_size, y = cv_error)) +
+  geom_line() +
+  labs(title = "Regression tree CV MSE for various min leaf sizes",
+       x = "Minimum Leaf Size",
+       y = "CV MSE") +
+  theme_minimal() +
+  scale_x_continuous(breaks = leaf_sizes)
+
+final_tree <- tree(Salary ~ ., data = train_data,
+                   control = tree.control(nobs = nrow(train_data),
+                                         minsize = best_leaf_size))
+test_pred <- predict(final_tree, newdata = test_data)
+test_mse <- mean((test_data$Salary - test_pred)^2)
+cat("Test MSE:", test_mse, "\n")
+test_mse_reg_tree <- test_mse
+```
+
+Searching over leaf sizes 1 to 10 for the regression tree resulted in a best leaf size of 8 with CV MSE of 139729.8. The test MSE for a tree trained on all of the train data with leaf size 8 was 161916.7.
+
+In general, higher leaf sizes (allowing more samples in terminal nodes) had lower CV MSE, so the tree was probably overfitting for smaller leaf sizes.
+
+###### 5b Bagging
+
+```{r}
+library(randomForest)
+# bagging is special case of random forest where mtry=p
+mtry <- ncol(train_data) - 1 # p
+# min number of observations in terminal nodes (hyperparameter)
+nodesize <- 1:10
+cv_errors <- rep(0, length(nodesize))
+
+for (i in 1:length(nodesize)) {
+  for (fold in 1:k) {
+    cv_train <- train_data[folds != fold, ]
+    cv_valid <- train_data[folds == fold, ]
+    tree_fit <- randomForest(Salary ~ ., data = cv_train,
+                            mtry = mtry, nodesize = nodesize[i])
+    pred <- predict(tree_fit, newdata = cv_valid)
+    cv_errors[i] <- cv_errors[i] + mean((cv_valid$Salary - pred)^2)
+  }
+  cv_errors[i] <- cv_errors[i] / k
+}
+best_idx <- which.min(cv_errors)
+best_nodesize <- nodesize[best_idx]
+cat("Best nodesize:", best_nodesize, "\n")
+cat("CV MSE at best nodesize:", cv_errors[best_idx], "\n")
+
+df_plot <- data.frame(nodesize = nodesize, cv_error = cv_errors)
+ggplot(df_plot, aes(x = nodesize, y = cv_error)) +
+  geom_line() +
+  labs(title = "Bagging CV MSE for various nodesizes",
+       x = "Minimum nodesize",
+       y = "CV MSE") +
+  theme_minimal() +
+  scale_x_continuous(breaks = nodesize)
+
+final_bag <- randomForest(Salary ~ ., data = train_data,
+                            mtry = mtry, nodesize = best_nodesize)
+test_pred <- predict(final_bag, newdata = test_data)
+test_mse <- mean((test_data$Salary - test_pred)^2)
+cat("Test MSE:", test_mse, "\n")
+test_mse_bag <- test_mse
+```
+
+Again, the best minimum number of observation in terminal nodes ("nodesize") was 8 with CV MSE of 80968.19 and test MSE of 116071.8.
+
+###### 5c Random forests
+
+Here, I use out-of-bag (OOB) error to tune the parameters for random forests, not CV.
+
+```{r}
+nodesize.values <- 1:10
+mtry.values <- 1:(ncol(train_data) - 1)  # p predictors
+oob.errors <- matrix(NA, 
+                     nrow = length(nodesize.values), 
+                     ncol = length(mtry.values))
+
+for (i in seq_along(nodesize.values)) {
+  for (j in seq_along(mtry.values)) {
+    rf.tuned <- randomForest(Salary ~ ., data = train_data,
+                             nodesize = nodesize.values[i],
+                             mtry = mtry.values[j])
+    # For regression: OOB MSE is in mse
+    oob.errors[i, j] <- tail(rf.tuned$mse, 1)
+  }
+}
+
+plot.data <- expand.grid(nodesize = nodesize.values,
+                         mtry = mtry.values)
+plot.data$OOB_Error <- as.vector(oob.errors)
+
+ggplot(plot.data, aes(x = nodesize, y = OOB_Error)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ mtry, labeller = label_both) +
+  labs(title = "OOB Error vs. nodesize and mtry",
+       x = "nodesize",
+       y = "OOB Error") +
+  theme_minimal()
+
+min_oob_error <- min(oob.errors, na.rm = TRUE)
+best_indices <- which(oob.errors == min_oob_error, arr.ind = TRUE)
+best_nodesize <- nodesize.values[best_indices[1]]
+best_mtry <- mtry.values[best_indices[2]]
+cat("Best nodesize:", best_nodesize, "\n")
+cat("Best mtry:", best_mtry, "\n")
+cat("OOB MSE at best parameters:", min_oob_error, "\n")
+
+final_rf <- randomForest(Salary ~ ., data = train_data,
+                             nodesize = best_nodesize,
+                             mtry = best_mtry)
+test_pred <- predict(final_rf, newdata = test_data)
+test_mse <- mean((test_data$Salary - test_pred)^2)
+cat("Test MSE:", test_mse, "\n")
+test_mse_rf <- test_mse
+```
+
+###### 5d Boosting
+
+For boosting, I tuned tree number (iterations), shrinkage (lambda), yet I left interaction depth fixed at 1 (stumps).
+
+```{r}
+library(gbm)
+n.trees <- c(100,500,1000)
+shrinkage <- c(0.001, 0.01, 0.1)
+interaction.depth <- 1
+cv_errors <- matrix(NA, nrow = length(n.trees), ncol = length(shrinkage))
+for (i in seq_along(n.trees)) {
+  for (j in seq_along(shrinkage)) {
+    boost_fit <- gbm(Salary ~ ., data = train_data, distribution = "gaussian",
+                     n.trees = n.trees[i], shrinkage = shrinkage[j],
+                     interaction.depth = interaction.depth, cv.folds = k)
+    best_iter <- gbm.perf(boost_fit, method = "cv", plot.it = FALSE)
+    cv_errors[i, j] <- boost_fit$cv.error[best_iter]
+  }
+}
+best_idx <- which(cv_errors == min(cv_errors), arr.ind = TRUE)
+best_n.trees <- n.trees[best_idx[1]]
+best_shrinkage <- shrinkage[best_idx[2]]
+cat("Best n.trees:", best_n.trees, "\n")
+cat("Best shrinkage:", best_shrinkage, "\n")
+cat("CV MSE at best parameters:", cv_errors[best_idx], "\n")
+best_boost <- gbm(Salary ~ ., data = train_data, distribution = "gaussian",
+                  n.trees = best_n.trees, shrinkage = best_shrinkage,
+                  interaction.depth = interaction.depth)
+test_mse <- mean((test_data$Salary -
+                    predict(best_boost, newdata = test_data,
+                            n.trees = best_n.trees))^2)
+test_mse_boost <- test_mse
+cat("Test MSE at best parameters:", test_mse, "\n")
+boost_plot <- expand.grid(n.trees = n.trees, shrinkage = shrinkage)
+boost_plot$cv_error <- as.vector(cv_errors)
+
+ggplot(boost_plot, aes(x = factor(n.trees), y = factor(shrinkage),
+                       fill = cv_error)) +
+  geom_tile() +
+  geom_text(aes(label = round(cv_error, 0)), color = "black", size = 3) +
+  labs(title = "CV MSE for Boosting across n.trees and shrinkage",
+       x = "Number of Trees (n.trees)",
+       y = "Shrinkage (lambda)") +
+  theme_minimal() +
+  scale_fill_gradient(low = "white", high = "red")
+```
+
+###### 5e BART
+
+```{r}
+library(BART)
+# expand categoricals into dummy variables
+bart_train <- model.matrix(Salary ~ ., data = train_data)[, -1] # remove intercept
+bart_test <- model.matrix(Salary ~ ., data = test_data)[, -1] # remove intercept
+bart_fit <- gbart(x.train = bart_train,
+             y.train = train_data$Salary,
+             x.test = bart_test
+)
+test_pred <- bart_fit$yhat.test.mean
+test_mse <- mean((test_data$Salary - test_pred)^2)
+test_mse_bart <- test_mse
+cat("Test MSE for BART:", test_mse, "\n")
+```
+
+Next steps: test mse comparison and discussion
+
+##### 6 Test MSE across models
+
+```{r}
+# bar plot of test MSE across models
+model_names <- c("Regression Tree", "Bagging", "Random Forests", "Boosting", "BART")
+test_mses <- c(test_mse_reg_tree, test_mse_bag, test_mse_rf, test_mse_boost, test_mse_bart)
+mse_df <- data.frame(Model = model_names, Test_MSE = test_mses)
+ggplot(mse_df, aes(x = Model, y = Test_MSE, fill = Model)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Test MSE Comparison Across Models",
+       x = "Model",
+       y = "Test MSE") +
+  theme_minimal()
+```
+
+The lowest test MSE was acheived by random forests (109129.8), and the regression tree model had the highest test MSE (161916.7). Bagging performed second best with test MSE of 116071.8. Therefore, the bagging methods performed well. Boosting and BART had similar test MSEs: 132325.2 and 131321.0. Maybe boosting would have performed better if interaction depths greater than 1 were explored.
+
+##### 7 Addressing research question
+
+To interpret model error, it's better to look at RMSE and understand what a middling salary is and the range of salary.
+
+```{r}
+median_salary <- median(train_data$Salary)
+cat("Median salary in training data:", median_salary, "\n")
+rmse_rf <- sqrt(test_mse_rf)
+cat("RMSE for random forest:", rmse_rf, "\n")
+hitters$Salary |> hist()
+```
+
+The median salary is 400 (units are thousands of dollars), yet the distribution is right heavy tailed with a non-negligable of salaries much higher than 400.
+
+RMSE for random forests is 330.35 which is a large average error with respect to the median salary. Given the large error, I would not use this model as a basis to start salary negotiations for a client. 
+
+
+```{r}
+# variable importance plot for random forest model
+varImpPlot(final_rf, main = "Variable Importance from Random Forest")
+```
+
+The variable importance plot for random forests suggests there exist key statistics for salary estimation. Notably, cumulative career runs (CRuns) and cumulative runs batted in (CRBI) for offensive players were predictors which decreased RSS the most when used to split samples. Meanwhile, the division and league of a player are not important factors for salary estimation.
+
+The interpretation of variable importance should be cautioned by the high test RMSE. The model is not accurate, so the variable importance may not be useful.
+
+In conclusion, I would not use the model for player salary negotiations because of the large test RMSE. 
+
+The random forest model was discussed because it had the minimal test MSE, and the goal was to develop a model to predict salary for contract negotiations. 
+
+##### 8 Model choice
+
+Again, I would choose random forests because it had the best test MSE.
+
+In the context of salary estimation for contract negotiations, the goal was to find a model that accurately predicts salary such that estimates can be used as a strong starting point for negotiations. Since random forests had the lowest test MSE, it was the model with the highest potential to yield an accurate salary estimate given a player's statistics. Furthermore, random forests variable importance is an interpretable metric that could indicate key statistics driving salary. Again however, variable importance should be interpreted with caution given the high model error.
+
+##### 9 Ethics
+
+An ethical concern with this study was the assumption that a small amount of player statistics can predict salary. This assumption is naive because salary could be statistics not included in the dataset or even off-field dynamics such as a player's popularity with fans.
+
+Another ethical concern is that a salary estimation model could be used to find a lower bound by recruiting teams which could lead to under paid players.
+
+
+
