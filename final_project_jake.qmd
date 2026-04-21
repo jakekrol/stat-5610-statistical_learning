@@ -1,0 +1,186 @@
+---
+title: "Final Project Jake"
+author: "Jacob Krol"
+date: "2026-04-24"
+format: pdf
+---
+
+## Introduction
+
+My individual research question is whether a house's value as an asset drives the actual median value of house prices in the Boston area. Using strictly "asset" features (e.g., property tax rate), my experiment contrasts my teammates who are predicting median house value using two other categories of predictors: i) socioeconomic/environmental factors and ii) locational factors.
+
+The data set is sourced from the ISLR2 R package's Boston dataset which, itself, is sourced and modified from the MASS R package.
+
+Here, I will regress median house value onto a subset of the available features which we have manually grouped as "asset value" predictors: property tax rate per $10,000, average number of rooms per home, and age. Age is not the median/average age of a housing unit. Instead, age is the proportion of housing units built before 1940.
+
+To answer the question of whether a house's asset value drives its actual value I will evaluate three regression approaches using root mean squared error (RMSE) as the evaluation metric: i) ridge regresssion, ii) principal component regression, and iii) bagging.
+
+## Data
+
+```{r}
+library(ISLR2)
+library(tidyverse)
+library(glmnet)
+library(pls)
+library(randomForest)
+```
+
+```{r}
+df_bos <- as_tibble(Boston)
+df_bos <- df_bos |> select(tax, rm, age, medv)
+head(df_bos)
+```
+
+```{r}
+summary(df_bos)
+```
+
+```{r}
+# check na values
+colSums(is.na(df_bos))
+```
+
+```{r}
+# check for duplicates
+sum(duplicated(df_bos))
+```
+
+```{r}
+pairs(df_bos)
+```
+
+Qualitatively, there are associations between median value and the predictors, especially number of rooms. 
+
+For evaluation, I will hold out 20% of the data for testing and use the remaining 80% for cross-validation to find optimal hyperparameters for each model.
+```{r}
+set.seed(0)
+train_index <- sample(1:nrow(df_bos), size = 0.8 * nrow(df_bos))
+train_data <- df_bos[train_index, ]
+test_data <- df_bos[-train_index, ]
+```
+
+## Models
+
+### Ridge Regression
+
+For ridge regression, I will select the optimal lambda using 10-fold cross-validation (default in cv.glmnet)on the training set 
+
+```{r}
+# glmnet requires matrices as input
+# and does not use formula syntax
+x_train <- as.matrix(train_data |> select(-medv))
+y_train <- train_data$medv
+x_test <- as.matrix(test_data |> select(-medv))
+y_test <- test_data$medv
+```
+
+```{r}
+# lambdas ranging from 10^4 to 10^-4
+lambdas <- 10^seq(4,-4, length = 50)
+# alpha=0 is ridge
+alpha <- 0
+cv_ridge <- cv.glmnet(x_train, y_train, alpha = alpha, lambda = lambdas)
+ridge_best_lambda <- round(cv_ridge$lambda.1se, digits=3)
+plot(cv_ridge)
+```
+
+The best lambda was `r ridge_best_lambda`.
+
+```{r}
+ridge_pred <- predict(cv_ridge, s = ridge_best_lambda, newx = x_test)
+ridge_rmse <- round(sqrt(mean((ridge_pred - y_test)^2)), digits=3)
+ridge_rmse_scaled <- ridge_rmse * 1000
+ridge_rmse_scaled
+```
+
+The ridge regression model had an RMSE of `r ridge_rmse_scaled` dollars.
+
+### Principal Component Regression
+
+I will select the optimal number of components using 10-fold cross-validation on the training set.
+
+```{r}
+set.seed(0)
+pcr_model <- pcr(medv ~ ., data = train_data, scale = TRUE, validation = "CV", segments = 10)
+validationplot(pcr_model, val.type = "RMSE")
+```
+
+Since 2 and 3 components have similar RMSE, I will choose the smaller model for test set evaluation: 2 components.
+
+```{r}
+pcr_pred <- predict(pcr_model, ncomp = 2, newdata = test_data)
+pcr_rmse <- round(sqrt(mean((pcr_pred - y_test)^2)), digits=3)
+pcr_rmse_scaled <- pcr_rmse * 1000
+pcr_rmse_scaled
+```
+
+The principal component regression model had an RMSE of `r pcr_rmse_scaled` dollars.
+
+### Bagging
+
+For bagging, I will search for optimal tree number using 10-fold cross-validation.
+
+
+```{r}
+set.seed(0)
+# for bagging, mtry = number of predictors
+mtry <- ncol(train_data) - 1
+trees <- seq(10,100, by = 5)
+# 10-fold cv
+k <- 10
+
+tree_rmse <- c()
+for (ntree in trees) {
+	all_fold_rmse <- c()
+	for (i in 1:k) {
+		# create folds
+		fold_index <- sample(1:nrow(train_data), size = nrow(train_data) / k)
+		fold_train <- train_data[-fold_index, ]
+		fold_validation <- train_data[fold_index, ]
+		# fit model
+		bag_model <- randomForest(medv ~ ., data = fold_train, mtry = mtry, ntree = ntree)
+		# predict on validation fold
+		bag_pred <- predict(bag_model, newdata = fold_validation)
+		# calculate RMSE for fold
+		fold_rmse <- sqrt(mean((bag_pred - fold_validation$medv)^2))	
+		all_fold_rmse <- c(all_fold_rmse, fold_rmse)
+	}
+	# average RMSE across folds for this tree number
+	tree_rmse <- c(tree_rmse, mean(all_fold_rmse))
+}
+
+```
+
+```{r}
+# plot tree number vs RMSE
+plot(trees, tree_rmse, type = "b", xlab = "Number of Trees", ylab = "CV RMSE")
+best_tree_index <- which.min(tree_rmse)
+best_tree <- trees[best_tree_index]
+best_tree
+```
+
+The best number of trees was `r best_tree`.
+
+```{r}
+# fit final bagging model with best tree number
+set.seed(0)
+final_bag_model <- randomForest(medv ~ ., data = train_data, mtry = mtry, ntree = best_tree)
+bag_pred <- predict(final_bag_model, newdata = test_data)
+bag_rmse <- round(sqrt(mean((bag_pred - y_test)^2)), digits=3)
+bag_rmse_scaled <- bag_rmse * 1000
+bag_rmse_scaled
+```
+
+The bagging model had an RMSE of `r bag_rmse_scaled` dollars.
+
+## Model comparison
+
+```{r}
+model_names <- c("Ridge Regression", "Principal Component Regression", "Bagging")
+model_rmse <- c(ridge_rmse_scaled, pcr_rmse_scaled, bag_rmse_scaled)
+barplot(model_rmse, names.arg = model_names, ylab = "Test RMSE (dollars)", main = "Model Comparison")
+```
+
+
+
+
